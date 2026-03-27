@@ -1,0 +1,153 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org"
+      xmlns:layout="http://www.ultraq.net.nz/thymeleaf/layout"
+      layout:decorate="~{layout/main}">
+<head>
+    <title>Maandoverzicht</title>
+</head>
+<body>
+    <section layout:fragment="content">
+        <h1 class="mb-4">Maandoverzicht</h1>
+
+        <!-- Month navigation -->
+        <div class="d-flex align-items-center mb-4">
+            <a th:href="@{/reports/monthly(year=${selectedMonth == 1 ? selectedYear - 1 : selectedYear}, month=${selectedMonth == 1 ? 12 : selectedMonth - 1})}"
+               class="btn btn-outline-secondary me-2">
+                <i class="bi bi-chevron-left"></i>
+            </a>
+            <h4 class="mb-0" th:text="${summary.monthName()} + ' ' + ${selectedYear}"></h4>
+            <a th:href="@{/reports/monthly(year=${selectedMonth == 12 ? selectedYear + 1 : selectedYear}, month=${selectedMonth == 12 ? 1 : selectedMonth + 1})}"
+               class="btn btn-outline-secondary ms-2">
+                <i class="bi bi-chevron-right"></i>
+            </a>
+        </div>
+
+        <!-- Summary cards -->
+        <div class="row g-3 mb-4">
+            <div class="col-md-3">
+                <div class="card text-center">
+                    <div class="card-body">
+                        <h6 class="text-muted">Totaal uren</h6>
+                        <h3 th:text="${#numbers.formatDecimal(summary.totalHours(), 1, 1, 'COMMA')} + 'u'"></h3>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-3">
+                <div class="card text-center">
+                    <div class="card-body">
+                        <h6 class="text-muted">Werkdagen</h6>
+                        <h3 th:text="${summary.workDays()}"></h3>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-3">
+                <div class="card text-center">
+                    <div class="card-body">
+                        <h6 class="text-muted">Overuren</h6>
+                        <h3 th:classappend="${summary.overtimeHours().signum() >= 0} ? 'saldo-positive' : 'saldo-negative'"
+                            th:text="${#numbers.formatDecimal(summary.overtimeHours(), 1, 1, 'COMMA')} + 'u'"></h3>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-3">
+                <div class="card text-center">
+                    <div class="card-body">
+                        <h6 class="text-muted">Verlofdagen</h6>
+                        <h3 th:text="${summary.vacationDays() + summary.sickDays() + summary.advDays() + summary.otherLeaveDays()}"></h3>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Hours per project -->
+        <div class="card mb-4">
+            <div class="card-header">
+                <i class="bi bi-folder me-1"></i>Uren per project
+            </div>
+            <div class="card-body p-0">
+                <table class="table table-hover mb-0" th:if="${!#lists.isEmpty(summary.projectSummaries())}">
+                    <thead class="table-light">
+                        <tr>
+                            <th>Project</th>
+                            <th class="text-center">Dagen</th>
+                            <th class="text-center">Uren</th>
+                            <th class="text-center">Overuren</th>
+                            <th class="text-center">Type</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr th:each="ps : ${summary.projectSummaries()}">
+                            <td th:text="${ps.projectName()}"></td>
+                            <td class="text-center" th:text="${ps.daysWorked()}"></td>
+                            <td class="text-center" th:text="${#numbers.formatDecimal(ps.totalHours(), 1, 1, 'COMMA')} + 'u'"></td>
+                            <td class="text-center"
+                                th:classappend="${ps.overtimeHours().signum() >= 0} ? 'saldo-positive' : 'saldo-negative'"
+                                th:text="${#numbers.formatDecimal(ps.overtimeHours(), 1, 1, 'COMMA')} + 'u'"></td>
+                            <td class="text-center">
+                                <span th:if="${ps.billable()}" class="badge bg-success">Factureerbaar</span>
+                                <span th:unless="${ps.billable()}" class="badge bg-secondary">Intern</span>
+                            </td>
+                        </tr>
+                    </tbody>
+                    <tfoot class="table-light">
+                        <tr class="fw-bold">
+                            <td>Totaal</td>
+                            <td class="text-center" th:text="${summary.workDays()}"></td>
+                            <td class="text-center" th:text="${#numbers.formatDecimal(summary.totalHours(), 1, 1, 'COMMA')} + 'u'"></td>
+                            <td class="text-center"
+                                th:classappend="${summary.overtimeHours().signum() >= 0} ? 'saldo-positive' : 'saldo-negative'"
+                                th:text="${#numbers.formatDecimal(summary.overtimeHours(), 1, 1, 'COMMA')} + 'u'"></td>
+                            <td></td>
+                        </tr>
+                    </tfoot>
+                </table>
+                <div th:if="${#lists.isEmpty(summary.projectSummaries())}" class="text-center text-muted py-4">
+                    Geen uren geregistreerd in deze maand.
+                </div>
+            </div>
+        </div>
+
+        <!-- Leave breakdown -->
+        <div class="row" th:if="${!summary.leaveByType().isEmpty()}">
+            <div class="col-md-6">
+                <div class="card">
+                    <div class="card-header">
+                        <i class="bi bi-calendar-check me-1"></i>Verlof deze maand
+                    </div>
+                    <div class="card-body p-0">
+                        <table class="table table-sm mb-0">
+                            <tbody>
+                                <tr th:each="entry : ${summary.leaveByType()}">
+                                    <td th:text="${entry.key}"></td>
+                                    <td class="text-end" th:text="${entry.value} + ' dag(en)'"></td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Billable summary -->
+        <div class="row mt-4">
+            <div class="col-md-6">
+                <div class="card">
+                    <div class="card-header">Factureerbaar vs Intern</div>
+                    <div class="card-body p-0">
+                        <table class="table table-sm mb-0">
+                            <tr>
+                                <td>Factureerbaar</td>
+                                <td class="text-end fw-bold" th:text="${#numbers.formatDecimal(summary.billableHours(), 1, 1, 'COMMA')} + 'u'"></td>
+                            </tr>
+                            <tr>
+                                <td>Intern</td>
+                                <td class="text-end" th:text="${#numbers.formatDecimal(summary.nonBillableHours(), 1, 1, 'COMMA')} + 'u'"></td>
+                            </tr>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+</body>
+</html>

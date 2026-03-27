@@ -1,0 +1,1 @@
+ALTER TABLE time_entry ADD COLUMN work_location VARCHAR(20) DEFAULT 'OFFICE' NOT NULL;

@@ -1,0 +1,108 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org"
+      xmlns:layout="http://www.ultraq.net.nz/thymeleaf/layout"
+      layout:decorate="~{layout/main}">
+<head>
+    <title>Weekoverzicht</title>
+</head>
+<body>
+    <section layout:fragment="content">
+        <h1 class="mb-4">Weekoverzicht</h1>
+
+        <!-- Week navigation -->
+        <div class="d-flex align-items-center mb-4">
+            <a th:href="@{/time-entry/weekly(week=${prevWeek})}" class="btn btn-outline-secondary me-2">
+                <i class="bi bi-chevron-left"></i>
+            </a>
+            <h5 class="mb-0">
+                <span th:text="${#temporals.format(monday, 'dd/MM/yyyy')}"></span>
+                &mdash;
+                <span th:text="${#temporals.format(friday, 'dd/MM/yyyy')}"></span>
+            </h5>
+            <a th:href="@{/time-entry/weekly(week=${nextWeek})}" class="btn btn-outline-secondary ms-2">
+                <i class="bi bi-chevron-right"></i>
+            </a>
+            <a th:href="@{/time-entry/weekly}" class="btn btn-outline-primary ms-3">Deze week</a>
+        </div>
+
+        <!-- Success message -->
+        <div th:if="${success}" class="alert alert-success alert-dismissible fade show" role="alert">
+            <span th:text="${success}"></span>
+            <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+        </div>
+
+        <form th:action="@{/time-entry/weekly}" method="post">
+            <input type="hidden" name="monday" th:value="${monday}">
+
+            <div class="table-responsive">
+                <table class="table table-bordered weekly-grid">
+                    <thead class="table-light">
+                        <tr>
+                            <th style="min-width: 200px;">Project</th>
+                            <th th:each="day : ${weekDays}" class="text-center"
+                                th:classappend="${holidays[day]} ? 'holiday'">
+                                <div th:text="${#temporals.format(day, 'EEE')}"></div>
+                                <small th:text="${#temporals.format(day, 'dd/MM')}"></small>
+                                <div th:if="${holidays[day]}">
+                                    <span class="badge bg-warning text-dark" style="font-size: 0.6rem;">Feestdag</span>
+                                </div>
+                                <div th:unless="${holidays[day]}" class="mt-1">
+                                    <button type="button" class="btn btn-outline-secondary btn-xs fill-day-btn"
+                                            th:data-date="${day}" title="Vul alle projecten voor deze dag">
+                                        <i class="bi bi-arrow-down"></i>
+                                    </button>
+                                </div>
+                            </th>
+                            <th class="text-center">Totaal</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr th:each="project : ${projects}">
+                            <td>
+                                <strong th:text="${project.name}"></strong>
+                                <small th:if="${project.dailyHourTarget != null}" class="text-muted d-block"
+                                       th:text="'Doel: ' + ${#numbers.formatDecimal(project.dailyHourTarget, 1, 1, 'COMMA')} + 'u/dag'"></small>
+                            </td>
+                            <td th:each="day : ${weekDays}" class="text-center"
+                                th:classappend="${holidays[day]} ? 'holiday'">
+                                <input type="number"
+                                       th:name="'hours_' + ${project.id} + '_' + ${day}"
+                                       th:value="${grid[project.id][day] != null and grid[project.id][day].compareTo(T(java.math.BigDecimal).ZERO) != 0} ? ${grid[project.id][day]} : ''"
+                                       class="form-control form-control-sm text-center"
+                                       style="width: 5rem; margin: 0 auto;"
+                                       step="0.1" min="0" max="24"
+                                       placeholder="0">
+                                <select th:name="'location_' + ${project.id} + '_' + ${day}"
+                                        class="form-select form-select-sm text-center mt-1"
+                                        style="width: 5rem; margin: 0 auto; font-size: 0.7rem; padding: 0.1rem 0.3rem;">
+                                    <option value="OFFICE"
+                                            th:selected="${locationGrid[project.id][day].name() == 'OFFICE'}">Kantoor</option>
+                                    <option value="HOME"
+                                            th:selected="${locationGrid[project.id][day].name() == 'HOME'}">Thuis</option>
+                                </select>
+                            </td>
+                            <td class="text-center fw-bold align-middle">
+                                <span th:text="${#numbers.formatDecimal(rowTotals[project.id], 1, 1, 'COMMA')} + 'u'"></span>
+                                <button type="button" class="btn btn-outline-primary btn-xs ms-1 fill-week-btn"
+                                        th:data-project-id="${project.id}"
+                                        th:data-target="${project.dailyHourTarget != null ? project.dailyHourTarget : '8'}"
+                                        title="Vul hele week met doel-uren">
+                                    <i class="bi bi-arrow-right"></i>
+                                </button>
+                            </td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+
+            <div th:if="${#lists.isEmpty(projects)}" class="alert alert-info">
+                Geen actieve projecten. <a th:href="@{/projects/new}">Maak eerst een project aan.</a>
+            </div>
+
+            <button th:if="${!#lists.isEmpty(projects)}" type="submit" class="btn btn-primary">
+                <i class="bi bi-check-lg me-1"></i>Week opslaan
+            </button>
+        </form>
+    </section>
+</body>
+</html>

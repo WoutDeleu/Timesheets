@@ -1,0 +1,41 @@
+# Java / Maven
+target/
+*.class
+*.jar
+*.war
+*.ear
+
+# Maven Wrapper
+!.mvn/wrapper/maven-wrapper.jar
+!.mvn/wrapper/maven-wrapper.properties
+
+# IDE
+.idea/
+*.iml
+*.ipr
+*.iws
+.project
+.classpath
+.settings/
+.factorypath
+*.swp
+*.swo
+*~
+.vscode/
+.DS_Store
+
+# Spring Boot
+*.log
+spring-shell.log
+
+# H2 Database (local data lives in ~/.timesheets/)
+*.db
+*.trace.db
+*.lock.db
+
+# Environment
+.env
+.env.local
+
+# OS
+Thumbs.db

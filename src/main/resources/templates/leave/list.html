@@ -1,0 +1,220 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org"
+      xmlns:layout="http://www.ultraq.net.nz/thymeleaf/layout"
+      layout:decorate="~{layout/main}">
+<head>
+    <title>Verlof</title>
+</head>
+<body>
+    <section layout:fragment="content">
+        <h1 class="mb-4">Verlof</h1>
+
+        <!-- Saldo overview -->
+        <div class="row g-3 mb-4">
+            <div class="col-md-4">
+                <div class="card">
+                    <div class="card-body text-center">
+                        <h6 class="text-muted">Verlof <span th:text="${selectedYear}"></span></h6>
+                        <h3>
+                            <span class="saldo-positive" th:text="${20 - vacationUsed}"></span>
+                            <small class="text-muted">/ 20 dagen</small>
+                        </h3>
+                        <small class="text-muted" th:text="${vacationUsed} + ' opgenomen'"></small>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-4">
+                <div class="card">
+                    <div class="card-body text-center">
+                        <h6 class="text-muted">ADV <span th:text="${selectedYear}"></span></h6>
+                        <h3>
+                            <span th:text="${advUsed}"></span>
+                            <small class="text-muted">dagen opgenomen</small>
+                        </h3>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-4">
+                <div class="card">
+                    <div class="card-body text-center">
+                        <h6 class="text-muted">Ziekte zonder attest <span th:text="${selectedYear}"></span></h6>
+                        <h3>
+                            <span th:classappend="${sickWithoutNoteUsed >= sickWithoutNoteTotal} ? 'saldo-negative' : 'saldo-positive'"
+                                  th:text="${sickWithoutNoteTotal - sickWithoutNoteUsed}"></span>
+                            <small class="text-muted" th:text="'/ ' + ${sickWithoutNoteTotal} + ' dagen'"></small>
+                        </h3>
+                        <small class="text-muted" th:text="${sickWithoutNoteUsed} + ' opgenomen'"></small>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Month navigation -->
+        <div class="d-flex align-items-center mb-4">
+            <a th:href="@{/leave(year=${selectedMonth == 1 ? selectedYear - 1 : selectedYear}, month=${selectedMonth == 1 ? 12 : selectedMonth - 1})}"
+               class="btn btn-outline-secondary me-2">
+                <i class="bi bi-chevron-left"></i>
+            </a>
+            <h5 class="mb-0" th:text="${monthName} + ' ' + ${selectedYear}"></h5>
+            <a th:href="@{/leave(year=${selectedMonth == 12 ? selectedYear + 1 : selectedYear}, month=${selectedMonth == 12 ? 1 : selectedMonth + 1})}"
+               class="btn btn-outline-secondary ms-2">
+                <i class="bi bi-chevron-right"></i>
+            </a>
+        </div>
+
+        <!-- Success message -->
+        <div th:if="${success}" class="alert alert-success alert-dismissible fade show" role="alert">
+            <span th:text="${success}"></span>
+            <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+        </div>
+
+        <div class="row">
+            <!-- Leave entries -->
+            <div class="col-md-7">
+                <div class="card">
+                    <div class="card-header">Verlofregistraties</div>
+                    <div class="card-body p-0">
+                        <table class="table table-hover mb-0" th:if="${!#lists.isEmpty(entries)}">
+                            <thead class="table-light">
+                                <tr>
+                                    <th>Datum</th>
+                                    <th>Type</th>
+                                    <th class="text-center">Uren</th>
+                                    <th>Notities</th>
+                                    <th class="text-end">Acties</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <tr th:each="entry : ${entries}">
+                                    <td th:text="${#temporals.format(entry.entryDate, 'dd/MM/yyyy')}"></td>
+                                    <td>
+                                        <span class="badge"
+                                              th:classappend="${entry.leaveType.name() == 'VACATION'} ? 'bg-primary' :
+                                                              (${entry.leaveType.name() == 'SICK'} ? 'bg-danger' :
+                                                              (${entry.leaveType.name() == 'ADV'} ? 'bg-info' : 'bg-secondary'))"
+                                              th:text="${entry.leaveType.displayName}"></span>
+                                        <span class="badge bg-warning text-dark"
+                                              th:if="${entry.leaveType.name() == 'SICK' and !entry.doctorsNote}"
+                                              title="Zonder doktersattest">Geen attest</span>
+                                    </td>
+                                    <td class="text-center"
+                                        th:text="${#numbers.formatDecimal(entry.hours, 1, 1, 'COMMA')} + 'u'"></td>
+                                    <td class="text-muted" th:text="${entry.notes}"></td>
+                                    <td class="text-end">
+                                        <form th:action="@{/leave/{id}/delete(id=${entry.id})}"
+                                              method="post" class="d-inline">
+                                            <input type="hidden" name="year" th:value="${selectedYear}">
+                                            <input type="hidden" name="month" th:value="${selectedMonth}">
+                                            <button type="submit" class="btn btn-sm btn-outline-danger">
+                                                <i class="bi bi-trash"></i>
+                                            </button>
+                                        </form>
+                                    </td>
+                                </tr>
+                            </tbody>
+                        </table>
+                        <div th:if="${#lists.isEmpty(entries)}" class="text-center text-muted py-4">
+                            Geen verlof geregistreerd in deze maand.
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Add leave form -->
+            <div class="col-md-5">
+                <div class="card">
+                    <div class="card-header">Verlof boeken</div>
+                    <div class="card-body">
+                        <form th:action="@{/leave}" th:object="${leaveEntry}" method="post">
+
+                            <div class="mb-3">
+                                <label for="entryDate" class="form-label">Datum *</label>
+                                <input type="date" class="form-control" id="entryDate" th:field="*{entryDate}"
+                                       th:classappend="${#fields.hasErrors('entryDate')} ? 'is-invalid'">
+                                <div class="invalid-feedback" th:if="${#fields.hasErrors('entryDate')}"
+                                     th:errors="*{entryDate}"></div>
+                            </div>
+
+                            <div class="mb-3">
+                                <label class="form-label">Type *</label>
+                                <input type="hidden" id="leaveType" th:field="*{leaveType}">
+                                <div class="d-flex flex-wrap gap-2" id="leaveTypeButtons">
+                                    <div th:each="type : ${leaveTypes}">
+                                        <input type="radio" class="btn-check" autocomplete="off"
+                                               th:name="'leaveTypeBtn'" th:id="'lt_' + ${type.name()}"
+                                               th:value="${type.name()}"
+                                               th:checked="${leaveEntry.leaveType != null and leaveEntry.leaveType.name() == type.name()}"
+                                               onclick="selectLeaveType(this.value);">
+                                        <label class="btn leave-type-btn"
+                                               th:for="'lt_' + ${type.name()}"
+                                               th:classappend="${type.name() == 'VACATION'} ? 'btn-outline-primary' :
+                                                               (${type.name() == 'SICK'} ? 'btn-outline-danger' :
+                                                               (${type.name() == 'ADV'} ? 'btn-outline-info' :
+                                                               (${type.name() == 'TRAINING'} ? 'btn-outline-success' : 'btn-outline-secondary')))"
+                                               th:text="${type.displayName}"></label>
+                                    </div>
+                                </div>
+                                <div class="invalid-feedback d-block" th:if="${#fields.hasErrors('leaveType')}"
+                                     th:errors="*{leaveType}"></div>
+                            </div>
+
+                            <div class="mb-3">
+                                <label class="form-label">Duur</label>
+                                <div class="btn-group w-100 mb-2" role="group">
+                                    <button type="button" class="btn btn-outline-secondary duration-btn active" data-hours="7.6">Volledige dag (7,6u)</button>
+                                    <button type="button" class="btn btn-outline-secondary duration-btn" data-hours="3.8">Halve dag (3,8u)</button>
+                                </div>
+                                <input type="number" class="form-control" id="hours" th:field="*{hours}"
+                                       step="0.1" min="0" max="24" placeholder="7,6">
+                                <div class="form-text">Klik hierboven of vul handmatig in</div>
+                            </div>
+
+                            <div class="mb-3" id="doctorsNoteGroup" style="display: none;">
+                                <div class="form-check">
+                                    <input type="hidden" name="doctorsNote" value="false">
+                                    <input class="form-check-input" type="checkbox" id="doctorsNote"
+                                           name="doctorsNote" value="true" checked>
+                                    <label class="form-check-label" for="doctorsNote">
+                                        Doktersattest
+                                    </label>
+                                </div>
+                                <div class="form-text">Vink uit als er geen doktersattest is</div>
+                            </div>
+
+                            <div class="mb-3">
+                                <label for="notes" class="form-label">Notities</label>
+                                <input type="text" class="form-control" id="notes" th:field="*{notes}"
+                                       placeholder="Optionele notitie">
+                            </div>
+
+                            <button type="submit" class="btn btn-primary w-100">
+                                <i class="bi bi-plus-lg me-1"></i>Verlof boeken
+                            </button>
+                        </form>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <script th:inline="javascript">
+            function selectLeaveType(value) {
+                document.getElementById('leaveType').value = value;
+                document.getElementById('doctorsNoteGroup').style.display =
+                    value === 'SICK' ? 'block' : 'none';
+            }
+            // Trigger on page load in case SICK is already selected
+            if (document.getElementById('leaveType').value === 'SICK') {
+                document.getElementById('doctorsNoteGroup').style.display = 'block';
+            }
+
+            // Duration buttons
+            document.querySelectorAll('.duration-btn').forEach(function(btn) {
+                btn.addEventListener('click', function() {
+                    document.querySelectorAll('.duration-btn').forEach(function(b) { b.classList.remove('active'); });
+                    this.classList.add('active');
+                    document.getElementById('hours').value = this.dataset.hours;
+                });
+            });
+        </script>
+    </section>
+</body>
+</html>

@@ -1,0 +1,51 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org"
+      xmlns:layout="http://www.ultraq.net.nz/thymeleaf/layout"
+      layout:decorate="~{layout/main}">
+<head>
+    <title>Rapporten</title>
+</head>
+<body>
+    <section layout:fragment="content">
+        <h1 class="mb-4">Rapporten</h1>
+
+        <div class="row g-4">
+            <div class="col-md-4">
+                <div class="card h-100">
+                    <div class="card-body">
+                        <h5 class="card-title">
+                            <i class="bi bi-calendar-month me-2"></i>Maandoverzicht
+                        </h5>
+                        <p class="card-text text-muted">Gedetailleerd overzicht per maand: uren per project, verlof, overuren.</p>
+                        <a th:href="@{/reports/monthly}" class="btn btn-primary">Bekijken</a>
+                    </div>
+                </div>
+            </div>
+
+            <div class="col-md-4">
+                <div class="card h-100">
+                    <div class="card-body">
+                        <h5 class="card-title">
+                            <i class="bi bi-calendar3 me-2"></i>Jaaroverzicht
+                        </h5>
+                        <p class="card-text text-muted">Totalen per maand, saldi-evolutie, verlof- en ADV-balans over het jaar.</p>
+                        <a th:href="@{/reports/yearly}" class="btn btn-primary">Bekijken</a>
+                    </div>
+                </div>
+            </div>
+
+            <div class="col-md-4">
+                <div class="card h-100">
+                    <div class="card-body">
+                        <h5 class="card-title">
+                            <i class="bi bi-download me-2"></i>Exporteren
+                        </h5>
+                        <p class="card-text text-muted">Exporteer uren als CSV of PDF. Kies periode, projecten en gegevens.</p>
+                        <a th:href="@{/reports/export}" class="btn btn-primary">Exporteren</a>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+</body>
+</html>

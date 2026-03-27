@@ -1,0 +1,2 @@
+- [User Profile](user_profile.md) — Axxes consultant, vim/terminal user, Belgian context
+- [Timesheets Context](project_timesheets.md) — Local timesheet app, Spring Boot, Belgian labor rules, key decisions

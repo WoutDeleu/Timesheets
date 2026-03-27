@@ -1,0 +1,79 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org"
+      xmlns:layout="http://www.ultraq.net.nz/thymeleaf/layout"
+      layout:decorate="~{layout/main}">
+<head>
+    <title th:text="${isEdit} ? 'Project bewerken' : 'Nieuw project'">Project</title>
+</head>
+<body>
+    <section layout:fragment="content">
+        <h1 th:text="${isEdit} ? 'Project bewerken' : 'Nieuw project'"></h1>
+
+        <div class="row mt-4">
+            <div class="col-md-8">
+                <form th:action="${isEdit} ? @{/projects/{id}(id=${project.id})} : @{/projects}"
+                      th:object="${project}" method="post">
+
+                    <!-- Name -->
+                    <div class="mb-3">
+                        <label for="name" class="form-label">Naam *</label>
+                        <input type="text" class="form-control" id="name" th:field="*{name}"
+                               th:classappend="${#fields.hasErrors('name')} ? 'is-invalid'"
+                               placeholder="bv. Klant XYZ">
+                        <div class="invalid-feedback" th:if="${#fields.hasErrors('name')}" th:errors="*{name}"></div>
+                    </div>
+
+                    <!-- Description -->
+                    <div class="mb-3">
+                        <label for="description" class="form-label">Beschrijving</label>
+                        <textarea class="form-control" id="description" th:field="*{description}"
+                                  rows="3" placeholder="Optionele beschrijving van het project"></textarea>
+                    </div>
+
+                    <!-- Daily hour target -->
+                    <div class="mb-3">
+                        <label for="dailyHourTarget" class="form-label">Dagelijks urendoel</label>
+                        <div class="input-group" style="max-width: 200px;">
+                            <input type="number" class="form-control" id="dailyHourTarget"
+                                   th:field="*{dailyHourTarget}"
+                                   step="0.1" min="0" max="24" placeholder="bv. 8,0">
+                            <span class="input-group-text">uur</span>
+                        </div>
+                        <div class="form-text">Laat leeg om het globale standaard (7,6u) te gebruiken. Uren boven dit doel worden als overuren geteld.</div>
+                    </div>
+
+                    <!-- Billable -->
+                    <div class="mb-3">
+                        <div class="form-check">
+                            <input class="form-check-input" type="checkbox" id="billable" th:field="*{billable}">
+                            <label class="form-check-label" for="billable">
+                                Factureerbaar
+                            </label>
+                        </div>
+                        <div class="form-text">Factureerbare uren worden apart gerapporteerd voor klantfacturatie.</div>
+                    </div>
+
+                    <!-- Active (only for edit) -->
+                    <div class="mb-3" th:if="${isEdit}">
+                        <div class="form-check">
+                            <input class="form-check-input" type="checkbox" id="active" th:field="*{active}">
+                            <label class="form-check-label" for="active">
+                                Actief
+                            </label>
+                        </div>
+                    </div>
+
+                    <!-- Buttons -->
+                    <div class="mt-4">
+                        <button type="submit" class="btn btn-primary">
+                            <i class="bi bi-check-lg me-1"></i>
+                            <span th:text="${isEdit} ? 'Opslaan' : 'Aanmaken'"></span>
+                        </button>
+                        <a th:href="@{/projects}" class="btn btn-outline-secondary ms-2">Annuleren</a>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </section>
+</body>
+</html>

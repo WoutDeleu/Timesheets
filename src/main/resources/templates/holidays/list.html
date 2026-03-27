@@ -1,0 +1,143 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org"
+      xmlns:layout="http://www.ultraq.net.nz/thymeleaf/layout"
+      layout:decorate="~{layout/main}">
+<head>
+    <title>Feestdagen</title>
+</head>
+<body>
+    <section layout:fragment="content">
+        <h1 class="mb-4">Feestdagen</h1>
+
+        <!-- Year navigation -->
+        <div class="d-flex align-items-center mb-4">
+            <a th:href="@{/holidays(year=${selectedYear - 1})}" class="btn btn-outline-secondary me-2">
+                <i class="bi bi-chevron-left"></i>
+            </a>
+            <h5 class="mb-0" th:text="${selectedYear}"></h5>
+            <a th:href="@{/holidays(year=${selectedYear + 1})}" class="btn btn-outline-secondary ms-2">
+                <i class="bi bi-chevron-right"></i>
+            </a>
+        </div>
+
+        <!-- Success message -->
+        <div th:if="${success}" class="alert alert-success alert-dismissible fade show" role="alert">
+            <span th:text="${success}"></span>
+            <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+        </div>
+
+        <!-- Error message -->
+        <div th:if="${error}" class="alert alert-danger alert-dismissible fade show" role="alert">
+            <span th:text="${error}"></span>
+            <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+        </div>
+
+        <!-- Compensatory days info -->
+        <div th:if="${weekendHolidayCount > 0}" class="alert alert-info mb-4">
+            <i class="bi bi-info-circle me-1"></i>
+            <strong th:text="${weekendHolidayCount}"></strong> feestdag(en) vallen op een weekend.
+            <span th:if="${remainingCompensatory > 0}">
+                Nog <strong th:text="${remainingCompensatory}"></strong> compensatiedag(en) in te plannen.
+            </span>
+            <span th:if="${remainingCompensatory <= 0}">
+                Alle compensatiedagen zijn ingepland.
+            </span>
+        </div>
+
+        <div class="row">
+            <div class="col-md-8">
+                <div class="card">
+                    <div class="card-body p-0">
+                        <table class="table table-hover mb-0">
+                            <thead class="table-light">
+                                <tr>
+                                    <th>Datum</th>
+                                    <th>Naam</th>
+                                    <th class="text-center">Type</th>
+                                    <th class="text-end">Acties</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <tr th:each="holiday : ${holidays}"
+                                    th:classappend="${holiday.holidayType.name() == 'NATIONAL' and (holiday.holidayDate.dayOfWeek.name() == 'SATURDAY' or holiday.holidayDate.dayOfWeek.name() == 'SUNDAY')} ? 'table-warning'">
+                                    <td th:text="${#temporals.format(holiday.holidayDate, 'dd/MM/yyyy (EEEE)')}"></td>
+                                    <td>
+                                        <span th:text="${holiday.name}"></span>
+                                        <span th:if="${holiday.holidayType.name() == 'NATIONAL' and (holiday.holidayDate.dayOfWeek.name() == 'SATURDAY' or holiday.holidayDate.dayOfWeek.name() == 'SUNDAY')}"
+                                              class="badge bg-warning text-dark ms-1">Weekend</span>
+                                    </td>
+                                    <td class="text-center">
+                                        <span th:if="${holiday.holidayType.name() == 'NATIONAL'}"
+                                              class="badge bg-primary">Nationaal</span>
+                                        <span th:if="${holiday.holidayType.name() == 'COMPANY'}"
+                                              class="badge bg-info">Bedrijf</span>
+                                        <span th:if="${holiday.holidayType.name() == 'COMPENSATORY'}"
+                                              class="badge bg-success">Compensatie</span>
+                                    </td>
+                                    <td class="text-end">
+                                        <form th:if="${holiday.editable}"
+                                              th:action="@{/holidays/{id}/delete(id=${holiday.id})}"
+                                              method="post" class="d-inline">
+                                            <input type="hidden" name="year" th:value="${selectedYear}">
+                                            <button type="submit" class="btn btn-sm btn-outline-danger">
+                                                <i class="bi bi-trash"></i>
+                                            </button>
+                                        </form>
+                                    </td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+
+            <div class="col-md-4">
+                <!-- Schedule compensatory day -->
+                <div th:if="${remainingCompensatory > 0}" class="card mb-3">
+                    <div class="card-header">
+                        Compensatiedag inplannen
+                        <span class="badge bg-success ms-1" th:text="${remainingCompensatory} + ' beschikbaar'"></span>
+                    </div>
+                    <div class="card-body">
+                        <form th:action="@{/holidays/compensatory}" method="post">
+                            <div class="mb-3">
+                                <label for="compDate" class="form-label">Datum</label>
+                                <input type="date" class="form-control" id="compDate" name="holidayDate" required>
+                            </div>
+                            <div class="mb-3">
+                                <label for="compName" class="form-label">Omschrijving</label>
+                                <input type="text" class="form-control" id="compName" name="name"
+                                       placeholder="bv. Compensatie Kerstmis" required>
+                            </div>
+                            <button type="submit" class="btn btn-success w-100">
+                                <i class="bi bi-calendar-plus me-1"></i>Inplannen
+                            </button>
+                        </form>
+                    </div>
+                </div>
+
+                <!-- Add company holiday -->
+                <div class="card">
+                    <div class="card-header">Bedrijfsfeestdag toevoegen</div>
+                    <div class="card-body">
+                        <form th:action="@{/holidays}" method="post">
+                            <div class="mb-3">
+                                <label for="holidayDate" class="form-label">Datum</label>
+                                <input type="date" class="form-control" id="holidayDate" name="holidayDate" required>
+                            </div>
+                            <div class="mb-3">
+                                <label for="name" class="form-label">Naam</label>
+                                <input type="text" class="form-control" id="name" name="name"
+                                       placeholder="bv. Brugdag" required>
+                            </div>
+                            <button type="submit" class="btn btn-primary w-100">
+                                <i class="bi bi-plus-lg me-1"></i>Toevoegen
+                            </button>
+                        </form>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+</body>
+</html>

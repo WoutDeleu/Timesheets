@@ -1,0 +1,152 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org"
+      xmlns:layout="http://www.ultraq.net.nz/thymeleaf/layout"
+      layout:decorate="~{layout/main}">
+<head>
+    <title>Instellingen</title>
+</head>
+<body>
+    <section layout:fragment="content">
+        <h1 class="mb-4">Instellingen</h1>
+
+        <!-- Success message -->
+        <div th:if="${success}" class="alert alert-success alert-dismissible fade show" role="alert">
+            <span th:text="${success}"></span>
+            <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+        </div>
+
+        <div class="row">
+            <div class="col-md-8">
+                <form th:action="@{/settings}" method="post">
+
+                    <!-- Work schedule -->
+                    <div class="card mb-4">
+                        <div class="card-header">
+                            <i class="bi bi-clock me-1"></i>Werkschema
+                        </div>
+                        <div class="card-body">
+                            <div class="row mb-3">
+                                <div class="col-md-6">
+                                    <label for="defaultDailyHours" class="form-label">Standaard uren per dag</label>
+                                    <div class="input-group" style="max-width: 200px;">
+                                        <input type="number" class="form-control" id="defaultDailyHours"
+                                               name="defaultDailyHours"
+                                               th:value="${defaultDailyHours}"
+                                               step="0.1" min="0" max="24">
+                                        <span class="input-group-text">uur</span>
+                                    </div>
+                                    <div class="form-text">Standaard werkdag voor Belgisch voltijds contract (7,6u = 38u/week)</div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Vacation -->
+                    <div class="card mb-4">
+                        <div class="card-header">
+                            <i class="bi bi-calendar-check me-1"></i>Verlof
+                        </div>
+                        <div class="card-body">
+                            <div class="row mb-3">
+                                <div class="col-md-6">
+                                    <label for="vacationDaysPerYear" class="form-label">Verlofdagen per jaar</label>
+                                    <div class="input-group" style="max-width: 200px;">
+                                        <input type="number" class="form-control" id="vacationDaysPerYear"
+                                               name="vacationDaysPerYear"
+                                               th:value="${vacationDaysPerYear}"
+                                               step="1" min="0" max="60">
+                                        <span class="input-group-text">dagen</span>
+                                    </div>
+                                    <div class="form-text">Wettelijk verlof (standaard 20 dagen voor voltijds)</div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Sick leave -->
+                    <div class="card mb-4">
+                        <div class="card-header">
+                            <i class="bi bi-bandaid me-1"></i>Ziekteverlof
+                        </div>
+                        <div class="card-body">
+                            <div class="row mb-3">
+                                <div class="col-md-6">
+                                    <label for="sickDaysWithoutNotePerYear" class="form-label">Dagen zonder doktersattest per jaar</label>
+                                    <div class="input-group" style="max-width: 200px;">
+                                        <input type="number" class="form-control" id="sickDaysWithoutNotePerYear"
+                                               name="sickDaysWithoutNotePerYear"
+                                               th:value="${sickDaysWithoutNotePerYear}"
+                                               step="1" min="0" max="365">
+                                        <span class="input-group-text">dagen</span>
+                                    </div>
+                                    <div class="form-text">Wettelijk toegestane ziektedagen zonder doktersattest (standaard 3 in Belgi&euml;)</div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- ADV -->
+                    <div class="card mb-4">
+                        <div class="card-header">
+                            <i class="bi bi-calculator me-1"></i>ADV (Arbeidsduurvermindering)
+                        </div>
+                        <div class="card-body">
+                            <div class="row g-3">
+                                <div class="col-md-6">
+                                    <label for="advDailySurplusHours" class="form-label">Surplus per 8u-werkdag</label>
+                                    <div class="input-group" style="max-width: 200px;">
+                                        <input type="number" class="form-control" id="advDailySurplusHours"
+                                               name="advDailySurplusHours"
+                                               th:value="${advDailySurplusHours}"
+                                               step="0.1" min="0" max="8">
+                                        <span class="input-group-text">uur</span>
+                                    </div>
+                                    <div class="form-text">Verschil tussen 8u en standaard werkdag (8,0 - 7,6 = 0,4u)</div>
+                                </div>
+                                <div class="col-md-6">
+                                    <label for="advDayHours" class="form-label">Uren per ADV-dag</label>
+                                    <div class="input-group" style="max-width: 200px;">
+                                        <input type="number" class="form-control" id="advDayHours"
+                                               name="advDayHours"
+                                               th:value="${advDayHours}"
+                                               step="0.1" min="0" max="24">
+                                        <span class="input-group-text">uur</span>
+                                    </div>
+                                    <div class="form-text">Hoeveel surplus uren nodig voor 1 ADV-dag (standaard 7,6u)</div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <button type="submit" class="btn btn-primary">
+                        <i class="bi bi-check-lg me-1"></i>Opslaan
+                    </button>
+                </form>
+            </div>
+
+            <!-- Info -->
+            <div class="col-md-4">
+                <div class="card">
+                    <div class="card-header">Info</div>
+                    <div class="card-body">
+                        <h6>ADV berekening</h6>
+                        <p class="text-muted small">
+                            Elke werkdag waarop je 8u werkt (i.p.v. 7,6u) bouwt 0,4u ADV-surplus op.
+                            Na 19 werkdagen van 8u heb je 7,6u opgebouwd = 1 ADV-dag.
+                        </p>
+                        <h6>Overuren</h6>
+                        <p class="text-muted small">
+                            Overuren worden per project berekend. Uren boven het dagelijks doel van het project
+                            (of het standaard uren/dag als er geen doel is ingesteld) tellen als overuren.
+                        </p>
+                        <h6>Database</h6>
+                        <p class="text-muted small">
+                            Data wordt opgeslagen in <code>~/.timesheets/data/</code>.
+                        </p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+</body>
+</html>

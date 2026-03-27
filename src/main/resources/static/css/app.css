@@ -1,0 +1,88 @@
+/* Timesheets — minimal custom styles (Bootstrap handles the rest) */
+
+body {
+    display: flex;
+    flex-direction: column;
+    min-height: 100vh;
+}
+
+main {
+    flex: 1;
+}
+
+/* Saldo cards on dashboard */
+.saldo-card .card-body {
+    padding: 1.25rem;
+}
+
+.saldo-positive {
+    color: #198754;
+}
+
+.saldo-negative {
+    color: #dc3545;
+}
+
+/* Weekly grid */
+.weekly-grid input[type="number"] {
+    width: 5rem;
+    text-align: center;
+}
+
+.weekly-grid td.weekend {
+    background-color: #f8f9fa;
+}
+
+.weekly-grid td.holiday {
+    background-color: #fff3cd;
+}
+
+/* Toggle button groups for project/leave type selection */
+.btn-check:checked + .btn-outline-primary {
+    background-color: #0d6efd;
+    color: #fff;
+}
+
+.btn-check:checked + .btn-outline-danger {
+    background-color: #dc3545;
+    color: #fff;
+}
+
+.btn-check:checked + .btn-outline-info {
+    background-color: #0dcaf0;
+    color: #000;
+}
+
+.btn-check:checked + .btn-outline-success {
+    background-color: #198754;
+    color: #fff;
+}
+
+.btn-check:checked + .btn-outline-secondary {
+    background-color: #6c757d;
+    color: #fff;
+}
+
+/* Extra-small button for weekly grid fill */
+.btn-xs {
+    padding: 0.1rem 0.3rem;
+    font-size: 0.7rem;
+    line-height: 1.2;
+}
+
+/* Hour preset buttons */
+.hour-preset {
+    min-width: 3.5rem;
+}
+
+/* Quick description buttons */
+.quick-desc {
+    cursor: pointer;
+}
+
+/* Duration toggle */
+.duration-btn.active {
+    background-color: #0d6efd;
+    border-color: #0d6efd;
+    color: #fff;
+}

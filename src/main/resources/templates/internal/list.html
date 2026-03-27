@@ -1,0 +1,137 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org"
+      xmlns:layout="http://www.ultraq.net.nz/thymeleaf/layout"
+      layout:decorate="~{layout/main}">
+<head>
+    <title>Interne Activiteiten</title>
+</head>
+<body>
+    <section layout:fragment="content">
+        <h1 class="mb-4">Interne Activiteiten</h1>
+
+        <!-- Month total -->
+        <div class="row g-3 mb-4">
+            <div class="col-md-4">
+                <div class="card">
+                    <div class="card-body text-center">
+                        <h6 class="text-muted">Totaal <span th:text="${monthName}"></span></h6>
+                        <h3 th:text="${#numbers.formatDecimal(monthTotal, 1, 1, 'COMMA')} + 'u'">0u</h3>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Month navigation -->
+        <div class="d-flex align-items-center mb-4">
+            <a th:href="@{/internal(year=${selectedMonth == 1 ? selectedYear - 1 : selectedYear}, month=${selectedMonth == 1 ? 12 : selectedMonth - 1})}"
+               class="btn btn-outline-secondary me-2">
+                <i class="bi bi-chevron-left"></i>
+            </a>
+            <h5 class="mb-0" th:text="${monthName} + ' ' + ${selectedYear}"></h5>
+            <a th:href="@{/internal(year=${selectedMonth == 12 ? selectedYear + 1 : selectedYear}, month=${selectedMonth == 12 ? 1 : selectedMonth + 1})}"
+               class="btn btn-outline-secondary ms-2">
+                <i class="bi bi-chevron-right"></i>
+            </a>
+        </div>
+
+        <!-- Success message -->
+        <div th:if="${success}" class="alert alert-success alert-dismissible fade show" role="alert">
+            <span th:text="${success}"></span>
+            <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+        </div>
+
+        <div class="row">
+            <!-- Activity entries -->
+            <div class="col-md-7">
+                <div class="card">
+                    <div class="card-header">Activiteiten</div>
+                    <div class="card-body p-0">
+                        <table class="table table-hover mb-0" th:if="${!#lists.isEmpty(entries)}">
+                            <thead class="table-light">
+                                <tr>
+                                    <th>Datum</th>
+                                    <th class="text-center">Uren</th>
+                                    <th>Beschrijving</th>
+                                    <th class="text-end">Acties</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <tr th:each="entry : ${entries}">
+                                    <td th:text="${#temporals.format(entry.activityDate, 'dd/MM/yyyy')}"></td>
+                                    <td class="text-center"
+                                        th:text="${#numbers.formatDecimal(entry.hours, 1, 1, 'COMMA')} + 'u'"></td>
+                                    <td th:text="${entry.description}"></td>
+                                    <td class="text-end">
+                                        <form th:action="@{/internal/{id}/delete(id=${entry.id})}"
+                                              method="post" class="d-inline">
+                                            <input type="hidden" name="year" th:value="${selectedYear}">
+                                            <input type="hidden" name="month" th:value="${selectedMonth}">
+                                            <button type="submit" class="btn btn-sm btn-outline-danger">
+                                                <i class="bi bi-trash"></i>
+                                            </button>
+                                        </form>
+                                    </td>
+                                </tr>
+                            </tbody>
+                        </table>
+                        <div th:if="${#lists.isEmpty(entries)}" class="text-center text-muted py-4">
+                            Geen interne activiteiten in deze maand.
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Add activity form -->
+            <div class="col-md-5">
+                <div class="card">
+                    <div class="card-header">Activiteit toevoegen</div>
+                    <div class="card-body">
+                        <form th:action="@{/internal}" th:object="${internalActivity}" method="post">
+
+                            <div class="mb-3">
+                                <label for="activityDate" class="form-label">Datum *</label>
+                                <input type="date" class="form-control" id="activityDate" th:field="*{activityDate}"
+                                       th:classappend="${#fields.hasErrors('activityDate')} ? 'is-invalid'">
+                                <div class="invalid-feedback" th:if="${#fields.hasErrors('activityDate')}"
+                                     th:errors="*{activityDate}"></div>
+                            </div>
+
+                            <div class="mb-3">
+                                <label class="form-label">Uren</label>
+                                <div class="d-flex flex-wrap gap-1 mb-2">
+                                    <button type="button" class="btn btn-sm btn-outline-secondary hour-preset" data-hours="4">4u</button>
+                                    <button type="button" class="btn btn-sm btn-outline-secondary hour-preset" data-hours="7.6">7,6u</button>
+                                    <button type="button" class="btn btn-sm btn-outline-primary hour-preset" data-hours="8">8u</button>
+                                </div>
+                                <input type="number" class="form-control" id="hours" th:field="*{hours}"
+                                       step="0.1" min="0" max="24" placeholder="7,6">
+                                <div class="invalid-feedback" th:if="${#fields.hasErrors('hours')}"
+                                     th:errors="*{hours}"></div>
+                            </div>
+
+                            <div class="mb-3">
+                                <label for="description" class="form-label">Beschrijving *</label>
+                                <div class="d-flex flex-wrap gap-1 mb-2">
+                                    <button type="button" class="btn btn-sm btn-outline-info quick-desc" data-desc="Opleiding">Opleiding</button>
+                                    <button type="button" class="btn btn-sm btn-outline-info quick-desc" data-desc="Teammeeting">Teammeeting</button>
+                                    <button type="button" class="btn btn-sm btn-outline-info quick-desc" data-desc="Functioneringsgesprek">Gesprek</button>
+                                    <button type="button" class="btn btn-sm btn-outline-info quick-desc" data-desc="Administratie">Admin</button>
+                                </div>
+                                <input type="text" class="form-control" id="description" th:field="*{description}"
+                                       th:classappend="${#fields.hasErrors('description')} ? 'is-invalid'"
+                                       placeholder="Of typ een eigen beschrijving">
+                                <div class="invalid-feedback" th:if="${#fields.hasErrors('description')}"
+                                     th:errors="*{description}"></div>
+                            </div>
+
+                            <button type="submit" class="btn btn-primary w-100">
+                                <i class="bi bi-plus-lg me-1"></i>Activiteit toevoegen
+                            </button>
+                        </form>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+</body>
+</html>

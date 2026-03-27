@@ -1,0 +1,104 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org"
+      xmlns:layout="http://www.ultraq.net.nz/thymeleaf/layout"
+      layout:decorate="~{layout/main}">
+<head>
+    <title>Exporteren</title>
+</head>
+<body>
+    <section layout:fragment="content">
+        <h1 class="mb-4">Exporteren</h1>
+
+        <div class="row">
+            <div class="col-md-6">
+                <div class="card">
+                    <div class="card-header">Export instellingen</div>
+                    <div class="card-body">
+                        <form id="exportForm">
+                            <!-- Date range -->
+                            <div class="row mb-3">
+                                <div class="col">
+                                    <label for="start" class="form-label">Van</label>
+                                    <input type="date" class="form-control" id="start" name="start" required>
+                                </div>
+                                <div class="col">
+                                    <label for="end" class="form-label">Tot</label>
+                                    <input type="date" class="form-control" id="end" name="end" required>
+                                </div>
+                            </div>
+
+                            <!-- Project filter -->
+                            <div class="mb-3">
+                                <label for="projectId" class="form-label">Project</label>
+                                <select class="form-select" id="projectId" name="projectId">
+                                    <option value="">Alle projecten</option>
+                                    <option th:each="project : ${projects}"
+                                            th:value="${project.id}"
+                                            th:text="${project.name}"></option>
+                                </select>
+                            </div>
+
+                            <!-- Export buttons -->
+                            <div class="d-flex gap-2">
+                                <button type="button" class="btn btn-primary" onclick="exportAs('csv')">
+                                    <i class="bi bi-filetype-csv me-1"></i>Exporteer CSV
+                                </button>
+                                <button type="button" class="btn btn-outline-primary" onclick="exportAs('pdf')">
+                                    <i class="bi bi-filetype-pdf me-1"></i>Exporteer PDF
+                                </button>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+            </div>
+
+            <div class="col-md-6">
+                <div class="card">
+                    <div class="card-header">Info</div>
+                    <div class="card-body">
+                        <h6>CSV formaat</h6>
+                        <p class="text-muted small">
+                            Puntkomma-gescheiden bestand met kolommen: Datum, Project, Uren, Begintijd, Eindtijd, Factureerbaar, Locatie, Notities.
+                            Geschikt voor Excel en Google Sheets.
+                        </p>
+                        <h6>PDF formaat</h6>
+                        <p class="text-muted small">
+                            Afdrukbaar urenrapport met totalen. Geschikt voor HR of klantfacturatie.
+                        </p>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <script th:inline="javascript">
+            function exportAs(format) {
+                var form = document.getElementById('exportForm');
+                var start = form.start.value;
+                var end = form.end.value;
+                var projectId = form.projectId.value;
+
+                if (!start || !end) {
+                    alert('Vul een begin- en einddatum in.');
+                    return;
+                }
+
+                var url = '/export/' + format + '?start=' + start + '&end=' + end;
+                if (projectId) {
+                    url += '&projectId=' + projectId;
+                }
+                window.location.href = url;
+            }
+
+            // Default date range: current month
+            document.addEventListener('DOMContentLoaded', function() {
+                var now = new Date();
+                var year = now.getFullYear();
+                var month = String(now.getMonth() + 1).padStart(2, '0');
+                var lastDay = new Date(year, now.getMonth() + 1, 0).getDate();
+                document.getElementById('start').value = year + '-' + month + '-01';
+                document.getElementById('end').value = year + '-' + month + '-' + String(lastDay).padStart(2, '0');
+            });
+        </script>
+    </section>
+</body>
+</html>

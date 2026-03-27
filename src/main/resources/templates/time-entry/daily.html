@@ -1,0 +1,176 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org"
+      xmlns:layout="http://www.ultraq.net.nz/thymeleaf/layout"
+      layout:decorate="~{layout/main}">
+<head>
+    <title>Uren invoeren</title>
+</head>
+<body>
+    <section layout:fragment="content">
+        <h1 class="mb-4">Uren invoeren</h1>
+
+        <!-- Date navigation -->
+        <div class="d-flex align-items-center mb-4">
+            <a th:href="@{/time-entry(date=${selectedDate.minusDays(1)})}" class="btn btn-outline-secondary me-2">
+                <i class="bi bi-chevron-left"></i>
+            </a>
+            <form class="d-inline">
+                <input type="date" name="date" class="form-control d-inline-block"
+                       style="width: auto;"
+                       th:value="${selectedDate}"
+                       onchange="this.form.submit()">
+            </form>
+            <a th:href="@{/time-entry(date=${selectedDate.plusDays(1)})}" class="btn btn-outline-secondary ms-2">
+                <i class="bi bi-chevron-right"></i>
+            </a>
+            <a th:href="@{/time-entry}" class="btn btn-outline-primary ms-3">Vandaag</a>
+
+            <span th:if="${isHoliday}" class="badge bg-warning text-dark ms-3">
+                <i class="bi bi-calendar-heart me-1"></i>Feestdag
+            </span>
+        </div>
+
+        <!-- Success message -->
+        <div th:if="${success}" class="alert alert-success alert-dismissible fade show" role="alert">
+            <span th:text="${success}"></span>
+            <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+        </div>
+
+        <div class="row">
+            <!-- Existing entries for this date -->
+            <div class="col-md-7">
+                <div class="card">
+                    <div class="card-header d-flex justify-content-between">
+                        <span>Geregistreerde uren</span>
+                        <span class="fw-bold"
+                              th:text="'Totaal: ' + ${#numbers.formatDecimal(totalHours, 1, 1, 'COMMA')} + 'u'"></span>
+                    </div>
+                    <div class="card-body p-0">
+                        <table class="table table-hover mb-0" th:if="${!#lists.isEmpty(entries)}">
+                            <thead class="table-light">
+                                <tr>
+                                    <th>Project</th>
+                                    <th class="text-center">Uren</th>
+                                    <th>Locatie</th>
+                                    <th>Notities</th>
+                                    <th class="text-end">Acties</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <tr th:each="entry : ${entries}">
+                                    <td th:text="${entry.project.name}"></td>
+                                    <td class="text-center"
+                                        th:text="${#numbers.formatDecimal(entry.hoursWorked, 1, 1, 'COMMA')} + 'u'"></td>
+                                    <td>
+                                        <span th:if="${entry.workLocation.name() == 'HOME'}"><i class="bi bi-house"></i> Thuis</span>
+                                        <span th:if="${entry.workLocation.name() == 'OFFICE'}"><i class="bi bi-building"></i> Kantoor</span>
+                                    </td>
+                                    <td class="text-muted" th:text="${entry.notes}"></td>
+                                    <td class="text-end">
+                                        <form th:action="@{/time-entry/{id}/delete(id=${entry.id})}"
+                                              method="post" class="d-inline">
+                                            <input type="hidden" name="date" th:value="${selectedDate}">
+                                            <button type="submit" class="btn btn-sm btn-outline-danger"
+                                                    title="Verwijderen">
+                                                <i class="bi bi-trash"></i>
+                                            </button>
+                                        </form>
+                                    </td>
+                                </tr>
+                            </tbody>
+                        </table>
+                        <div th:if="${#lists.isEmpty(entries)}" class="text-center text-muted py-4">
+                            Nog geen uren geregistreerd voor deze dag.
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- New entry form -->
+            <div class="col-md-5">
+                <div class="card">
+                    <div class="card-header">Uren toevoegen</div>
+                    <div class="card-body">
+                        <form th:action="@{/time-entry}" th:object="${timeEntry}" method="post">
+                            <input type="hidden" th:field="*{entryDate}">
+
+                            <div class="mb-3">
+                                <label class="form-label">Project *</label>
+                                <input type="hidden" id="projectId" th:field="*{projectId}">
+                                <div class="d-flex flex-wrap gap-2" id="projectButtons">
+                                    <div th:each="p : ${projects}">
+                                        <input type="radio" class="btn-check" autocomplete="off"
+                                               th:name="'projectBtn'" th:id="'proj_' + ${p.id}"
+                                               th:value="${p.id}"
+                                               th:checked="${timeEntry.projectId != null and timeEntry.projectId == p.id}"
+                                               onclick="document.getElementById('projectId').value = this.value;">
+                                        <label class="btn btn-outline-primary"
+                                               th:for="'proj_' + ${p.id}"
+                                               th:text="${p.name}"></label>
+                                    </div>
+                                </div>
+                                <div class="invalid-feedback d-block" th:if="${#fields.hasErrors('projectId')}"
+                                     th:errors="*{projectId}"></div>
+                            </div>
+
+                            <div class="mb-3">
+                                <label for="hoursWorked" class="form-label">Uren *</label>
+                                <div class="d-flex flex-wrap gap-1 mb-2">
+                                    <button type="button" class="btn btn-sm btn-outline-secondary hour-preset" data-hours="4">4u</button>
+                                    <button type="button" class="btn btn-sm btn-outline-secondary hour-preset" data-hours="7.6">7,6u</button>
+                                    <button type="button" class="btn btn-sm btn-outline-primary hour-preset" data-hours="8">8u</button>
+                                </div>
+                                <input type="number" class="form-control" id="hoursWorked"
+                                       th:field="*{hoursWorked}"
+                                       th:classappend="${#fields.hasErrors('hoursWorked')} ? 'is-invalid'"
+                                       step="0.1" min="0" max="24" placeholder="bv. 8,0">
+                                <div class="invalid-feedback" th:if="${#fields.hasErrors('hoursWorked')}"
+                                     th:errors="*{hoursWorked}"></div>
+                            </div>
+
+                            <div class="row mb-3">
+                                <div class="col">
+                                    <label for="startTime" class="form-label">Van</label>
+                                    <input type="time" class="form-control" id="startTime" th:field="*{startTime}">
+                                </div>
+                                <div class="col">
+                                    <label for="endTime" class="form-label">Tot</label>
+                                    <input type="time" class="form-control" id="endTime" th:field="*{endTime}">
+                                </div>
+                            </div>
+
+                            <div class="mb-3">
+                                <label for="notes" class="form-label">Notities</label>
+                                <input type="text" class="form-control" id="notes" th:field="*{notes}"
+                                       placeholder="Optionele notitie">
+                            </div>
+
+                            <div class="mb-3">
+                                <label class="form-label">Locatie</label>
+                                <div class="d-flex gap-2">
+                                    <input type="radio" class="btn-check" name="workLocation" id="locOffice"
+                                           value="OFFICE"
+                                           th:checked="${timeEntry.workLocation() == null or timeEntry.workLocation().name() == 'OFFICE'}">
+                                    <label class="btn btn-outline-secondary" for="locOffice">
+                                        <i class="bi bi-building me-1"></i>Kantoor
+                                    </label>
+                                    <input type="radio" class="btn-check" name="workLocation" id="locHome"
+                                           value="HOME"
+                                           th:checked="${timeEntry.workLocation() != null and timeEntry.workLocation().name() == 'HOME'}">
+                                    <label class="btn btn-outline-secondary" for="locHome">
+                                        <i class="bi bi-house me-1"></i>Thuis
+                                    </label>
+                                </div>
+                            </div>
+
+                            <button type="submit" class="btn btn-primary w-100">
+                                <i class="bi bi-plus-lg me-1"></i>Toevoegen
+                            </button>
+                        </form>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+</body>
+</html>

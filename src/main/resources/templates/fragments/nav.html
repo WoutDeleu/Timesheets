@@ -1,0 +1,65 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<nav th:fragment="nav" class="navbar navbar-expand-lg navbar-dark bg-dark">
+    <div class="container">
+        <a class="navbar-brand" th:href="@{/}">
+            <i class="bi bi-clock-history me-1"></i> Timesheets
+        </a>
+        <button class="navbar-toggler" type="button"
+                data-bs-toggle="collapse" data-bs-target="#navbarNav">
+            <span class="navbar-toggler-icon"></span>
+        </button>
+        <div class="collapse navbar-collapse" id="navbarNav">
+            <ul class="navbar-nav me-auto">
+                <li class="nav-item">
+                    <a class="nav-link" th:href="@{/}" th:classappend="${#strings.equals(currentPage, 'dashboard')} ? 'active'">
+                        <i class="bi bi-speedometer2 me-1"></i>Dashboard
+                    </a>
+                </li>
+                <li class="nav-item">
+                    <a class="nav-link" th:href="@{/time-entry}" th:classappend="${#strings.equals(currentPage, 'time-entry')} ? 'active'">
+                        <i class="bi bi-pencil-square me-1"></i>Time Entry
+                    </a>
+                </li>
+                <li class="nav-item">
+                    <a class="nav-link" th:href="@{/time-entry/weekly}" th:classappend="${#strings.equals(currentPage, 'weekly')} ? 'active'">
+                        <i class="bi bi-calendar-week me-1"></i>Weekly
+                    </a>
+                </li>
+                <li class="nav-item">
+                    <a class="nav-link" th:href="@{/projects}" th:classappend="${#strings.equals(currentPage, 'projects')} ? 'active'">
+                        <i class="bi bi-folder me-1"></i>Projects
+                    </a>
+                </li>
+                <li class="nav-item">
+                    <a class="nav-link" th:href="@{/leave}" th:classappend="${#strings.equals(currentPage, 'leave')} ? 'active'">
+                        <i class="bi bi-calendar-check me-1"></i>Leave
+                    </a>
+                </li>
+                <li class="nav-item">
+                    <a class="nav-link" th:href="@{/internal}" th:classappend="${#strings.equals(currentPage, 'internal')} ? 'active'">
+                        <i class="bi bi-building me-1"></i>Intern
+                    </a>
+                </li>
+                <li class="nav-item">
+                    <a class="nav-link" th:href="@{/holidays}" th:classappend="${#strings.equals(currentPage, 'holidays')} ? 'active'">
+                        <i class="bi bi-calendar-heart me-1"></i>Holidays
+                    </a>
+                </li>
+                <li class="nav-item">
+                    <a class="nav-link" th:href="@{/reports}" th:classappend="${#strings.equals(currentPage, 'reports')} ? 'active'">
+                        <i class="bi bi-file-earmark-bar-graph me-1"></i>Reports
+                    </a>
+                </li>
+            </ul>
+            <ul class="navbar-nav">
+                <li class="nav-item">
+                    <a class="nav-link" th:href="@{/settings}" th:classappend="${#strings.equals(currentPage, 'settings')} ? 'active'">
+                        <i class="bi bi-gear me-1"></i>Settings
+                    </a>
+                </li>
+            </ul>
+        </div>
+    </div>
+</nav>
+</html>

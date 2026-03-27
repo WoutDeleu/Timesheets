@@ -1,0 +1,157 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org"
+      xmlns:layout="http://www.ultraq.net.nz/thymeleaf/layout"
+      layout:decorate="~{layout/main}">
+<head>
+    <title>Dashboard</title>
+</head>
+<body>
+    <section layout:fragment="content">
+        <div class="d-flex justify-content-between align-items-center mb-4">
+            <h1>Dashboard</h1>
+            <span class="text-muted" th:text="${currentYear}"></span>
+        </div>
+
+        <!-- Saldo cards -->
+        <div class="row g-4">
+            <!-- Holiday Balance -->
+            <div class="col-md-4">
+                <div class="card saldo-card">
+                    <div class="card-body">
+                        <h6 class="card-subtitle mb-2 text-muted">
+                            <i class="bi bi-calendar-check me-1"></i>Verlof Saldo
+                        </h6>
+                        <h2 class="card-title"
+                            th:classappend="${vacationRemaining > 0} ? 'saldo-positive' : 'saldo-negative'">
+                            <span th:text="${vacationRemaining}"></span> dagen
+                        </h2>
+                        <p class="card-text text-muted small">
+                            <span th:text="${vacationUsed}"></span> opgenomen &bull;
+                            <span th:text="${vacationTotal}"></span> totaal
+                        </p>
+                        <p th:if="${vacationExhaustionDate != null}" class="card-text small text-warning">
+                            <i class="bi bi-exclamation-triangle me-1"></i>
+                            Op dit tempo op tegen
+                            <span th:text="${#temporals.format(vacationExhaustionDate, 'dd/MM/yyyy')}"></span>
+                        </p>
+                    </div>
+                </div>
+            </div>
+
+            <!-- ADV Balance -->
+            <div class="col-md-4">
+                <div class="card saldo-card">
+                    <div class="card-body">
+                        <h6 class="card-subtitle mb-2 text-muted">
+                            <i class="bi bi-clock me-1"></i>ADV Saldo
+                        </h6>
+                        <h2 class="card-title"
+                            th:classappend="${advBalance.compareTo(T(java.math.BigDecimal).ZERO) >= 0} ? 'saldo-positive' : 'saldo-negative'">
+                            <span th:text="${#numbers.formatDecimal(advBalance, 1, 2, 'COMMA')}"></span> dagen
+                        </h2>
+                        <p class="card-text text-muted small">
+                            <span th:text="${#numbers.formatDecimal(advEarned, 1, 2, 'COMMA')}"></span> verdiend &bull;
+                            <span th:text="${advUsed}"></span> opgenomen
+                        </p>
+                        <p class="card-text text-muted small">
+                            <span th:text="${#numbers.formatDecimal(advSurplusHours, 1, 1, 'COMMA')}"></span> surplus uren opgebouwd
+                        </p>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Overtime -->
+            <div class="col-md-4">
+                <div class="card saldo-card">
+                    <div class="card-body">
+                        <h6 class="card-subtitle mb-2 text-muted">
+                            <i class="bi bi-hourglass-split me-1"></i>Overuren Totaal
+                        </h6>
+                        <h2 class="card-title"
+                            th:classappend="${totalOvertime.compareTo(T(java.math.BigDecimal).ZERO) >= 0} ? 'saldo-positive' : 'saldo-negative'">
+                            <span th:text="${#numbers.formatDecimal(totalOvertime, 1, 1, 'COMMA')}"></span> uren
+                        </h2>
+                        <p class="card-text text-muted small">Alle projecten samen</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Overtime per project -->
+        <div class="row mt-4" th:if="${!overtimePerProject.isEmpty()}">
+            <div class="col-md-6">
+                <div class="card">
+                    <div class="card-header">
+                        <i class="bi bi-hourglass-split me-1"></i>Overuren per project
+                    </div>
+                    <div class="card-body p-0">
+                        <table class="table table-sm mb-0">
+                            <thead class="table-light">
+                                <tr>
+                                    <th>Project</th>
+                                    <th class="text-end">Saldo</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <tr th:each="entry : ${overtimePerProject}">
+                                    <td th:text="${entry.key.name}"></td>
+                                    <td class="text-end"
+                                        th:classappend="${entry.value.compareTo(T(java.math.BigDecimal).ZERO) >= 0} ? 'saldo-positive' : 'saldo-negative'">
+                                        <span th:text="${#numbers.formatDecimal(entry.value, 1, 1, 'COMMA')}"></span>u
+                                    </td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Today's summary -->
+            <div class="col-md-6">
+                <div class="card">
+                    <div class="card-header">
+                        <i class="bi bi-calendar-date me-1"></i>Vandaag
+                        <span class="float-end fw-bold"
+                              th:text="${#numbers.formatDecimal(todayTotal, 1, 1, 'COMMA')} + 'u'"></span>
+                    </div>
+                    <div class="card-body p-0">
+                        <table class="table table-sm mb-0" th:if="${!#lists.isEmpty(todayEntries)}">
+                            <tbody>
+                                <tr th:each="entry : ${todayEntries}">
+                                    <td th:text="${entry.project.name}"></td>
+                                    <td class="text-end"
+                                        th:text="${#numbers.formatDecimal(entry.hoursWorked, 1, 1, 'COMMA')} + 'u'"></td>
+                                </tr>
+                            </tbody>
+                        </table>
+                        <div th:if="${#lists.isEmpty(todayEntries)}" class="text-center text-muted py-3">
+                            Nog geen uren vandaag.
+                            <a th:href="@{/time-entry}">Uren invoeren</a>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Quick actions -->
+        <div class="row mt-4">
+            <div class="col-12">
+                <div class="card">
+                    <div class="card-body">
+                        <h5 class="card-title">Snelle acties</h5>
+                        <a th:href="@{/time-entry}" class="btn btn-primary me-2">
+                            <i class="bi bi-pencil-square me-1"></i>Uren invoeren
+                        </a>
+                        <a th:href="@{/leave}" class="btn btn-outline-primary me-2">
+                            <i class="bi bi-calendar-plus me-1"></i>Verlof boeken
+                        </a>
+                        <a th:href="@{/reports}" class="btn btn-outline-secondary">
+                            <i class="bi bi-file-earmark-bar-graph me-1"></i>Rapporten
+                        </a>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+</body>
+</html>
