@@ -5,7 +5,7 @@ allowed-tools: Read, Glob, Grep, Bash
 
 Give a project status overview:
 
-1. Check which entities/models exist in `src/main/java/be/axxes/timesheets/model/`
+1. Check which entities/models exist in `src/main/java/io/timesheets/model/`
 2. Check which controllers exist and what endpoints they serve
 3. Check which Thymeleaf templates exist
 4. Check which Flyway migrations exist

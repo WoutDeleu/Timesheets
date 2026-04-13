@@ -26,11 +26,11 @@ Implement a complete feature end-to-end. You will be given a feature description
 ## What to create for each feature
 
 1. **Flyway migration** — `src/main/resources/db/migration/V{next}__{description}.sql`
-2. **JPA Entity** — `src/main/java/be/axxes/timesheets/model/`
-3. **Repository** — `src/main/java/be/axxes/timesheets/repository/` (Spring Data JPA interface)
-4. **DTO** — `src/main/java/be/axxes/timesheets/dto/` (Java record)
-5. **Service** — `src/main/java/be/axxes/timesheets/service/` (business logic, constructor injection, @Transactional)
-6. **Controller** — `src/main/java/be/axxes/timesheets/controller/` (thin, delegates to service)
+2. **JPA Entity** — `src/main/java/io/timesheets/model/`
+3. **Repository** — `src/main/java/io/timesheets/repository/` (Spring Data JPA interface)
+4. **DTO** — `src/main/java/io/timesheets/dto/` (Java record)
+5. **Service** — `src/main/java/io/timesheets/service/` (business logic, constructor injection, @Transactional)
+6. **Controller** — `src/main/java/io/timesheets/controller/` (thin, delegates to service)
 7. **Thymeleaf templates** — `src/main/resources/templates/` (Bootstrap 5, layout dialect, HTMX)
 8. **Tests** — Service tests (JUnit 5, Mockito), controller tests (@WebMvcTest)
 

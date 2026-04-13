@@ -2,7 +2,7 @@
 
 ## Overview
 
-A local-first timesheet application for an **Axxes consultant** to track billable hours across client projects, manage leave balances, and generate configurable reports. The app runs entirely on the local machine — no cloud hosting, no external dependencies at runtime.
+A local-first timesheet application for a **consultant** to track billable hours across client projects, manage leave balances, and generate configurable reports. The app runs entirely on the local machine — no cloud hosting, no external dependencies at runtime.
 
 **Tech Stack:** Java 21, Spring Boot, Thymeleaf, Bootstrap 5, H2 (file-based), Maven
 
@@ -14,7 +14,7 @@ A local-first timesheet application for an **Axxes consultant** to track billabl
 No authentication required. The app opens and the data is yours. One user, one dataset.
 
 ### Projects
-- Multiple projects can be created (e.g., client engagements, internal Axxes work)
+- Multiple projects can be created (e.g., client engagements, internal work)
 - Each project has a name, optional description, and optional daily hour target
 - Projects can be active or archived
 - Distinguish between **client projects** (billable) and **internal projects** (non-billable)
@@ -67,7 +67,7 @@ No authentication required. The app opens and the data is yours. One user, one d
 - Armistice Day (11 Nov)
 - Christmas Day (25 Dec)
 
-Users can add company-specific closure days (e.g., bridge days, Axxes events).
+Users can add company-specific closure days (e.g., bridge days, company events).
 
 ---
 

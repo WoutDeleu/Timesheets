@@ -1,7 +1,7 @@
 # Timesheets
 
 ## Project Overview
-Local-first timesheet app for an Axxes consultant. Tracks billable hours across client projects, manages leave/ADV/overtime balances, generates exportable reports. Single user, no auth.
+Local-first timesheet app for a consultant. Tracks billable hours across client projects, manages leave/ADV/overtime balances, generates exportable reports. Single user, no auth.
 
 See `PROJECT_DESCRIPTION.md` for full requirements.
 
@@ -18,7 +18,7 @@ See `PROJECT_DESCRIPTION.md` for full requirements.
 ```
 src/
   main/
-    java/be/axxes/timesheets/
+    java/io/timesheets/
       TimesheetsApplication.java
       config/           # Spring configuration, H2 setup
       controller/       # Thymeleaf controllers (one per page/feature)
@@ -37,7 +37,7 @@ src/
       db/migration/     # Flyway SQL migrations (V1__*, V2__*, ...)
       application.yml   # Spring Boot config
   test/
-    java/be/axxes/timesheets/
+    java/io/timesheets/
       controller/       # Controller tests
       service/          # Service unit tests
       repository/       # Repository integration tests
