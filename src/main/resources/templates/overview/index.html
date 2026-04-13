@@ -1,0 +1,222 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org"
+      xmlns:layout="http://www.ultraq.net.nz/thymeleaf/layout"
+      layout:decorate="~{layout/main}">
+<head>
+    <title>Overzicht</title>
+</head>
+<body>
+    <section layout:fragment="content">
+        <h1 class="mb-4">Overzicht</h1>
+
+        <!-- Navigation: prev/next + mode toggle -->
+        <div class="d-flex align-items-center mb-4 flex-wrap gap-2">
+            <a th:href="${overview.mode() == 'week'}
+                    ? @{/overview(week=${overview.prevParam()})}
+                    : @{/overview(month=${overview.prevParam().getYear() + '-' + (overview.prevParam().getMonthValue() < 10 ? '0' : '') + overview.prevParam().getMonthValue()})}"
+               class="btn btn-outline-secondary">
+                <i class="bi bi-chevron-left"></i>
+            </a>
+            <h5 class="mb-0 mx-2" th:text="${overview.periodLabel()}"></h5>
+            <a th:href="${overview.mode() == 'week'}
+                    ? @{/overview(week=${overview.nextParam()})}
+                    : @{/overview(month=${overview.nextParam().getYear() + '-' + (overview.nextParam().getMonthValue() < 10 ? '0' : '') + overview.nextParam().getMonthValue()})}"
+               class="btn btn-outline-secondary">
+                <i class="bi bi-chevron-right"></i>
+            </a>
+            <a th:href="@{/overview}" class="btn btn-outline-primary ms-2">Vandaag</a>
+
+            <div class="btn-group ms-auto">
+                <a th:href="@{/overview(week=${overview.periodStart()})}"
+                   class="btn"
+                   th:classappend="${overview.mode() == 'week'} ? 'btn-primary' : 'btn-outline-primary'">
+                    Week
+                </a>
+                <a th:href="@{/overview(month=${overview.periodStart().getYear() + '-' + (overview.periodStart().getMonthValue() < 10 ? '0' : '') + overview.periodStart().getMonthValue()})}"
+                   class="btn"
+                   th:classappend="${overview.mode() == 'month'} ? 'btn-primary' : 'btn-outline-primary'">
+                    Maand
+                </a>
+            </div>
+        </div>
+
+        <!-- Period summary -->
+        <div class="row g-3 mb-4">
+            <div class="col-md-6">
+                <div class="card text-center h-100">
+                    <div class="card-body">
+                        <h6 class="card-subtitle text-muted mb-2">Totaal uren</h6>
+                        <h3 th:text="${hourFmt.format(overview.periodTotalGross())}">0:00</h3>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-6">
+                <div class="card text-center h-100">
+                    <div class="card-body">
+                        <h6 class="card-subtitle text-muted mb-2">Periode saldo</h6>
+                        <h3 th:classappend="${overview.periodBalance().signum() >= 0} ? 'saldo-positive' : 'saldo-negative'"
+                            th:text="${(overview.periodBalance().signum() >= 0 ? '+' : '') + hourFmt.format(overview.periodBalance())}">0:00</h3>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Flash messages -->
+        <div th:if="${success}" class="alert alert-success alert-dismissible fade show" role="alert">
+            <span th:text="${success}"></span>
+            <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+        </div>
+        <div th:if="${error}" class="alert alert-danger alert-dismissible fade show" role="alert">
+            <span th:text="${error}"></span>
+            <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+        </div>
+
+        <!-- ==================== WEEKLY MODE ==================== -->
+        <div th:if="${overview.mode() == 'week'}">
+            <div th:each="day : ${overview.days()}" class="card mb-3"
+                 th:classappend="${day.isToday()} ? 'day-today' : ''">
+
+                <!-- Day header -->
+                <div class="card-header d-flex justify-content-between align-items-center"
+                     th:classappend="${day.isWeekend()} ? 'bg-light text-muted' : ''">
+                    <div>
+                        <strong th:text="${day.formattedDate()}"></strong>
+                        <span class="text-muted ms-1" th:text="${day.dayName()}"></span>
+
+                        <span th:if="${day.isHoliday()}" class="badge bg-warning text-dark ms-2">
+                            <i class="bi bi-calendar-heart me-1"></i>
+                            <span th:text="${day.holiday().name}"></span>
+                        </span>
+
+                        <th:block th:if="${day.isLeave()}">
+                            <span class="badge ms-2"
+                                  th:classappend="${day.leaveEntry().leaveType.name() == 'VACATION'} ? 'bg-primary' :
+                                                 (${day.leaveEntry().leaveType.name() == 'ADV'} ? 'bg-info' :
+                                                 (${day.leaveEntry().leaveType.name() == 'SICK'} ? 'bg-danger' :
+                                                 (${day.leaveEntry().leaveType.name() == 'TRAINING'} ? 'bg-success' : 'bg-secondary')))"
+                                  th:text="${day.leaveEntry().leaveType.displayName}"></span>
+                        </th:block>
+                    </div>
+
+                    <div class="d-flex align-items-center">
+                        <span th:if="${day.totalGrossHours().signum() > 0}" class="fw-bold me-2"
+                              th:text="${hourFmt.format(day.totalGrossHours())}"></span>
+                        <span th:if="${!day.isWeekend() and day.totalGrossHours().signum() > 0}"
+                              class="badge me-2"
+                              th:classappend="${day.dailyBalance().signum() >= 0} ? 'bg-success' : 'bg-danger'"
+                              th:text="${(day.dailyBalance().signum() >= 0 ? '+' : '') + hourFmt.format(day.dailyBalance())}">
+                        </span>
+                        <a th:href="@{/time-entry(date=${day.date()})}"
+                           class="btn btn-sm btn-outline-secondary" title="Bewerken">
+                            <i class="bi bi-pencil"></i>
+                        </a>
+                    </div>
+                </div>
+
+                <!-- Day body: entries (always visible, read-only) -->
+                <div class="card-body py-2" th:if="${!#lists.isEmpty(day.timeEntries())}">
+                    <table class="table table-sm mb-0">
+                        <tbody>
+                            <tr th:each="entry : ${day.timeEntries()}">
+                                <td th:text="${entry.project.name}"></td>
+                                <td class="text-center"
+                                    th:text="${hourFmt.format(entry.hoursWorked.add(entry.breakDuration != null ? entry.breakDuration : T(java.math.BigDecimal).ZERO))}"></td>
+                                <td class="text-center text-muted small"
+                                    th:if="${entry.breakDuration != null and entry.breakDuration.signum() > 0}"
+                                    th:text="'pauze ' + ${hourFmt.format(entry.breakDuration)}"></td>
+                                <td class="text-center text-muted small"
+                                    th:if="${entry.breakDuration == null or entry.breakDuration.signum() == 0}"></td>
+                                <td>
+                                    <i th:if="${entry.workLocation.name() == 'HOME'}"
+                                       class="bi bi-house-fill text-primary" title="Thuis"></i>
+                                    <i th:if="${entry.workLocation.name() == 'OFFICE'}"
+                                       class="bi bi-building text-secondary" title="Kantoor"></i>
+                                </td>
+                                <td class="text-muted small" th:text="${entry.notes}"></td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+
+                <!-- Empty workday -->
+                <div class="card-body py-2 text-muted small"
+                     th:if="${#lists.isEmpty(day.timeEntries()) and !day.isWeekend() and !day.isHoliday() and !day.isLeave()}">
+                    Geen uren geregistreerd
+                </div>
+            </div>
+        </div>
+
+        <!-- ==================== MONTHLY MODE ==================== -->
+        <div th:if="${overview.mode() == 'month'}">
+            <div class="card">
+                <div class="card-body p-0">
+                    <div class="table-responsive">
+                        <table class="table table-bordered mb-0 overview-grid">
+                            <thead class="table-light">
+                                <tr>
+                                    <th class="text-center" style="width: 60px;">Week</th>
+                                    <th class="text-center">Maandag</th>
+                                    <th class="text-center">Dinsdag</th>
+                                    <th class="text-center">Woensdag</th>
+                                    <th class="text-center">Donderdag</th>
+                                    <th class="text-center">Vrijdag</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <tr th:each="row : ${overview.weekRows()}">
+                                    <td class="text-center align-middle fw-bold text-muted">
+                                        <span th:text="${row.weekNumber()}"></span>
+                                    </td>
+                                    <th:block th:with="cells=${T(java.util.List).of(row.mondayCell(), row.tuesdayCell(), row.wednesdayCell(), row.thursdayCell(), row.fridayCell())}">
+                                        <td th:each="cell : ${cells}"
+                                            class="overview-cell"
+                                            th:classappend="${cell.isToday()} ? 'overview-cell-today' : (${cell.isHoliday()} ? 'overview-cell-holiday' : '')">
+
+                                            <!-- Day number + edit link -->
+                                            <div class="d-flex justify-content-between align-items-start mb-1">
+                                                <a th:href="@{/time-entry(date=${cell.date()})}"
+                                                   class="fw-bold text-decoration-none"
+                                                   th:classappend="${cell.date().getMonthValue() != overview.periodStart().getMonthValue()} ? 'text-muted' : ''"
+                                                   th:text="${cell.date().getDayOfMonth()}"></a>
+                                                <span th:if="${cell.totalGrossHours().signum() > 0}"
+                                                      class="badge"
+                                                      th:classappend="${cell.dailyBalance().signum() >= 0} ? 'bg-success' : 'bg-danger'"
+                                                      th:text="${hourFmt.format(cell.totalGrossHours())}"></span>
+                                            </div>
+
+                                            <!-- Holiday badge -->
+                                            <div th:if="${cell.isHoliday()}" class="mb-1">
+                                                <span class="badge bg-warning text-dark" style="font-size: 0.65rem;"
+                                                      th:text="${cell.holiday().name}"></span>
+                                            </div>
+
+                                            <!-- Leave badge -->
+                                            <div th:if="${cell.isLeave()}" class="mb-1">
+                                                <span class="badge" style="font-size: 0.65rem;"
+                                                      th:classappend="${cell.leaveEntry().leaveType.name() == 'VACATION'} ? 'bg-primary' :
+                                                                     (${cell.leaveEntry().leaveType.name() == 'ADV'} ? 'bg-info' :
+                                                                     (${cell.leaveEntry().leaveType.name() == 'SICK'} ? 'bg-danger' :
+                                                                     (${cell.leaveEntry().leaveType.name() == 'TRAINING'} ? 'bg-success' : 'bg-secondary')))"
+                                                      th:text="${cell.leaveEntry().leaveType.displayName}"></span>
+                                            </div>
+
+                                            <!-- Project entries (compact) -->
+                                            <div th:each="entry : ${cell.timeEntries()}" class="small text-nowrap text-truncate" style="max-width: 140px;">
+                                                <i th:if="${entry.workLocation.name() == 'HOME'}"
+                                                   class="bi bi-house-fill text-primary" style="font-size: 0.7rem;"></i>
+                                                <i th:if="${entry.workLocation.name() == 'OFFICE'}"
+                                                   class="bi bi-building text-secondary" style="font-size: 0.7rem;"></i>
+                                                <span class="text-muted" th:text="${entry.project.name}"></span>
+                                            </div>
+                                        </td>
+                                    </th:block>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+</body>
+</html>

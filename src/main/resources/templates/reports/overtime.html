@@ -1,0 +1,149 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org"
+      xmlns:layout="http://www.ultraq.net.nz/thymeleaf/layout"
+      layout:decorate="~{layout/main}">
+<head>
+    <title>Overuren evolutie</title>
+</head>
+<body>
+    <section layout:fragment="content">
+        <h1 class="mb-4">Overuren evolutie</h1>
+
+        <!-- Project selector -->
+        <div class="mb-3">
+            <div class="d-flex flex-wrap gap-2 align-items-center">
+                <span class="text-muted me-1">Project:</span>
+                <a th:each="p : ${projects}"
+                   th:href="@{/reports/overtime(year=${selectedYear}, projectId=${p.id})}"
+                   class="btn btn-sm"
+                   th:classappend="${selectedProjectId != null and selectedProjectId == p.id} ? 'btn-primary' : 'btn-outline-primary'"
+                   th:text="${p.name}"></a>
+            </div>
+        </div>
+
+        <!-- Year navigation -->
+        <div class="d-flex align-items-center mb-4">
+            <a th:href="@{/reports/overtime(year=${selectedYear - 1}, projectId=${selectedProjectId})}"
+               class="btn btn-outline-secondary me-2">
+                <i class="bi bi-chevron-left"></i>
+            </a>
+            <h5 class="mb-0" th:text="${selectedYear}"></h5>
+            <a th:href="@{/reports/overtime(year=${selectedYear + 1}, projectId=${selectedProjectId})}"
+               class="btn btn-outline-secondary ms-2">
+                <i class="bi bi-chevron-right"></i>
+            </a>
+            <a th:href="@{/reports/overtime(projectId=${selectedProjectId})}"
+               class="btn btn-outline-primary ms-3">Dit jaar</a>
+        </div>
+
+        <!-- Chart -->
+        <div class="card" th:if="${selectedProjectId != null}">
+            <div class="card-header">
+                <span th:text="'Overuren saldo-evolutie: ' + ${selectedProjectName}"></span>
+            </div>
+            <div class="card-body">
+                <canvas id="overtimeChart" style="max-height: 400px;"></canvas>
+            </div>
+        </div>
+
+        <div th:if="${selectedProjectId == null}" class="alert alert-info">
+            Geen actieve projecten gevonden. <a th:href="@{/projects/new}">Maak eerst een project aan.</a>
+        </div>
+
+        <a th:href="@{/reports}" class="btn btn-outline-secondary mt-3">
+            <i class="bi bi-arrow-left me-1"></i>Terug naar rapporten
+        </a>
+
+        <script th:if="${selectedProjectId != null}">
+            document.addEventListener('DOMContentLoaded', function() {
+                var labels = [(${chartLabelsJson})];
+                var data = [(${chartDataJson})];
+
+                var ctx = document.getElementById('overtimeChart').getContext('2d');
+
+                var pointColors = data.map(function(v) {
+                    return v >= 0 ? '#198754' : '#dc3545';
+                });
+
+                new Chart(ctx, {
+                    type: 'line',
+                    data: {
+                        labels: labels,
+                        datasets: [{
+                            label: 'Overuren saldo',
+                            data: data,
+                            borderColor: '#0d6efd',
+                            backgroundColor: 'rgba(13, 110, 253, 0.1)',
+                            borderWidth: 2,
+                            pointBackgroundColor: pointColors,
+                            pointRadius: 3,
+                            fill: true,
+                            tension: 0.2
+                        }]
+                    },
+                    options: {
+                        responsive: true,
+                        maintainAspectRatio: true,
+                        interaction: {
+                            intersect: false,
+                            mode: 'index'
+                        },
+                        plugins: {
+                            legend: { display: false },
+                            tooltip: {
+                                callbacks: {
+                                    label: function(context) {
+                                        var val = context.parsed.y;
+                                        var totalMinutes = Math.round(Math.abs(val) * 60);
+                                        var hours = Math.floor(totalMinutes / 60);
+                                        var minutes = totalMinutes % 60;
+                                        var formatted = hours + ':' + (minutes < 10 ? '0' : '') + minutes;
+                                        return (val < 0 ? '-' : '+') + formatted;
+                                    }
+                                }
+                            }
+                        },
+                        scales: {
+                            x: {
+                                ticks: {
+                                    maxTicksLimit: 20
+                                }
+                            },
+                            y: {
+                                ticks: {
+                                    callback: function(value) {
+                                        var totalMinutes = Math.round(Math.abs(value) * 60);
+                                        var hours = Math.floor(totalMinutes / 60);
+                                        var minutes = totalMinutes % 60;
+                                        var formatted = hours + ':' + (minutes < 10 ? '0' : '') + minutes;
+                                        return (value < 0 ? '-' : '') + formatted;
+                                    }
+                                }
+                            }
+                        }
+                    },
+                    plugins: [{
+                        id: 'zeroLine',
+                        beforeDraw: function(chart) {
+                            var yScale = chart.scales.y;
+                            var ctx2 = chart.ctx;
+                            var yZero = yScale.getPixelForValue(0);
+                            if (yZero >= yScale.top && yZero <= yScale.bottom) {
+                                ctx2.save();
+                                ctx2.beginPath();
+                                ctx2.moveTo(chart.chartArea.left, yZero);
+                                ctx2.lineTo(chart.chartArea.right, yZero);
+                                ctx2.lineWidth = 1.5;
+                                ctx2.strokeStyle = 'rgba(0, 0, 0, 0.3)';
+                                ctx2.setLineDash([5, 5]);
+                                ctx2.stroke();
+                                ctx2.restore();
+                            }
+                        }
+                    }]
+                });
+            });
+        </script>
+    </section>
+</body>
+</html>

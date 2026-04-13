@@ -86,3 +86,24 @@ main {
     border-color: #0d6efd;
     color: #fff;
 }
+
+/* Overview page */
+.day-today {
+    border-left: 3px solid #0d6efd !important;
+}
+
+/* Monthly calendar grid */
+.overview-grid td.overview-cell {
+    vertical-align: top;
+    padding: 0.4rem 0.5rem;
+    min-height: 80px;
+    min-width: 120px;
+}
+
+.overview-grid td.overview-cell-today {
+    background-color: #e8f0fe;
+}
+
+.overview-grid td.overview-cell-holiday {
+    background-color: #fff8e1;
+}

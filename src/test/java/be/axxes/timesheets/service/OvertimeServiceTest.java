@@ -1,7 +1,10 @@
 package be.axxes.timesheets.service;
 
+import be.axxes.timesheets.model.LeaveEntry;
+import be.axxes.timesheets.model.LeaveType;
 import be.axxes.timesheets.model.Project;
 import be.axxes.timesheets.model.TimeEntry;
+import be.axxes.timesheets.repository.LeaveEntryRepository;
 import be.axxes.timesheets.repository.ProjectRepository;
 import be.axxes.timesheets.repository.TimeEntryRepository;
 import org.junit.jupiter.api.BeforeEach;
@@ -30,19 +33,24 @@ class OvertimeServiceTest {
     private ProjectRepository projectRepository;
 
     @Mock
+    private LeaveEntryRepository leaveEntryRepository;
+
+    @Mock
     private SettingsService settingsService;
 
     private OvertimeService overtimeService;
 
     @BeforeEach
     void setUp() {
-        overtimeService = new OvertimeService(timeEntryRepository, projectRepository, settingsService);
+        overtimeService = new OvertimeService(timeEntryRepository, projectRepository, leaveEntryRepository, settingsService);
+        when(settingsService.getDefaultDailyHours()).thenReturn(new BigDecimal("7.6"));
     }
 
     @Test
     void shouldCalculateOvertimeWhenExceedingProjectTarget() {
         var project = createProject(new BigDecimal("8.0"));
         when(projectRepository.findById(1L)).thenReturn(Optional.of(project));
+        when(leaveEntryRepository.findByEntryDateBetweenOrderByEntryDateAsc(any(), any())).thenReturn(List.of());
 
         var entries = List.of(
                 createTimeEntry(LocalDate.of(2026, 1, 5), project, new BigDecimal("9.0")),  // 1h overtime
@@ -60,6 +68,7 @@ class OvertimeServiceTest {
     void shouldCalculateNegativeOvertimeWhenUnderTarget() {
         var project = createProject(new BigDecimal("8.0"));
         when(projectRepository.findById(1L)).thenReturn(Optional.of(project));
+        when(leaveEntryRepository.findByEntryDateBetweenOrderByEntryDateAsc(any(), any())).thenReturn(List.of());
 
         var entries = List.of(
                 createTimeEntry(LocalDate.of(2026, 1, 5), project, new BigDecimal("7.0")),  // -1h
@@ -77,7 +86,7 @@ class OvertimeServiceTest {
     void shouldUseGlobalDefaultWhenNoProjectTarget() {
         var project = createProject(null);  // No target set
         when(projectRepository.findById(1L)).thenReturn(Optional.of(project));
-        when(settingsService.getDefaultDailyHours()).thenReturn(new BigDecimal("7.6"));
+        when(leaveEntryRepository.findByEntryDateBetweenOrderByEntryDateAsc(any(), any())).thenReturn(List.of());
 
         var entries = List.of(
                 createTimeEntry(LocalDate.of(2026, 1, 5), project, new BigDecimal("8.0"))  // 0.4h overtime
@@ -94,6 +103,7 @@ class OvertimeServiceTest {
         var project = createProject(new BigDecimal("8.0"));
         when(projectRepository.findById(1L)).thenReturn(Optional.of(project));
         when(timeEntryRepository.findByProjectIdAndEntryDateBetween(eq(1L), any(), any())).thenReturn(List.of());
+        when(leaveEntryRepository.findByEntryDateBetweenOrderByEntryDateAsc(any(), any())).thenReturn(List.of());
 
         var overtime = overtimeService.calculateOvertimeForProjectInYear(1L, 2026);
         assertEquals(0, BigDecimal.ZERO.compareTo(overtime));
@@ -103,6 +113,7 @@ class OvertimeServiceTest {
     void shouldMixOvertimeAndUndertime() {
         var project = createProject(new BigDecimal("8.0"));
         when(projectRepository.findById(1L)).thenReturn(Optional.of(project));
+        when(leaveEntryRepository.findByEntryDateBetweenOrderByEntryDateAsc(any(), any())).thenReturn(List.of());
 
         var entries = List.of(
                 createTimeEntry(LocalDate.of(2026, 1, 5), project, new BigDecimal("10.0")),  // +2h
@@ -113,6 +124,71 @@ class OvertimeServiceTest {
 
         var overtime = overtimeService.calculateOvertimeForProjectInYear(1L, 2026);
         // (10-8) + (6-8) = 0
+        assertEquals(0, BigDecimal.ZERO.compareTo(overtime));
+    }
+
+    @Test
+    void shouldReduceTargetByLeaveHoursOnPartialSickDay() {
+        // Half day sick (3.8h) + half day work (3.8h) = 0 overtime
+        var project = createProject(new BigDecimal("7.6"));
+        when(projectRepository.findById(1L)).thenReturn(Optional.of(project));
+
+        var sickDate = LocalDate.of(2026, 1, 5);
+        var leaveEntry = new LeaveEntry();
+        leaveEntry.setEntryDate(sickDate);
+        leaveEntry.setLeaveType(LeaveType.SICK);
+        leaveEntry.setHours(new BigDecimal("3.8"));
+        when(leaveEntryRepository.findByEntryDateBetweenOrderByEntryDateAsc(any(), any()))
+                .thenReturn(List.of(leaveEntry));
+
+        var entries = List.of(
+                createTimeEntry(sickDate, project, new BigDecimal("3.8"))  // half day work
+        );
+        when(timeEntryRepository.findByProjectIdAndEntryDateBetween(eq(1L), any(), any())).thenReturn(entries);
+
+        var overtime = overtimeService.calculateOvertimeForProjectInYear(1L, 2026);
+        // effectiveTarget = 7.6 - 3.8 = 3.8, worked 3.8 -> 0 overtime
+        assertEquals(0, BigDecimal.ZERO.compareTo(overtime));
+    }
+
+    @Test
+    void shouldUseDefaultTargetOnLeaveDayWhenProjectTargetIsHigher() {
+        // Project target = 8h, but on a sick day the target drops to the Axxes standard (7.6h)
+        // Half day sick (3.8h) + half day work (3.8h) = 0 overtime (not -0.4)
+        var project = createProject(new BigDecimal("8.0"));
+        when(projectRepository.findById(1L)).thenReturn(Optional.of(project));
+
+        var sickDate = LocalDate.of(2026, 2, 9);
+        var leaveEntry = new LeaveEntry();
+        leaveEntry.setEntryDate(sickDate);
+        leaveEntry.setLeaveType(LeaveType.SICK);
+        leaveEntry.setHours(new BigDecimal("3.8"));
+        when(leaveEntryRepository.findByEntryDateBetweenOrderByEntryDateAsc(any(), any()))
+                .thenReturn(List.of(leaveEntry));
+
+        var entries = List.of(
+                createTimeEntry(sickDate, project, new BigDecimal("3.8"))
+        );
+        when(timeEntryRepository.findByProjectIdAndEntryDateBetween(eq(1L), any(), any())).thenReturn(entries);
+
+        var overtime = overtimeService.calculateOvertimeForProjectInYear(1L, 2026);
+        // Day target becomes 7.6 (standard), effective = 7.6 - 3.8 = 3.8, worked 3.8 -> 0
+        assertEquals(0, BigDecimal.ZERO.compareTo(overtime));
+    }
+
+    @Test
+    void shouldNotPenalizeOvertimeOnFullSickDay() {
+        // Full sick day (7.6h) + no work = 0 overtime (not -7.6)
+        var project = createProject(new BigDecimal("7.6"));
+        when(projectRepository.findById(1L)).thenReturn(Optional.of(project));
+
+        when(leaveEntryRepository.findByEntryDateBetweenOrderByEntryDateAsc(any(), any()))
+                .thenReturn(List.of());
+        when(timeEntryRepository.findByProjectIdAndEntryDateBetween(eq(1L), any(), any()))
+                .thenReturn(List.of());
+
+        var overtime = overtimeService.calculateOvertimeForProjectInYear(1L, 2026);
+        // No entries at all -> 0 overtime
         assertEquals(0, BigDecimal.ZERO.compareTo(overtime));
     }
 

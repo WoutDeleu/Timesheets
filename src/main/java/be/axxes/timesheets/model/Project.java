@@ -20,6 +20,9 @@ public class Project {
     @Column(name = "daily_hour_target")
     private BigDecimal dailyHourTarget;
 
+    @Column(name = "default_break_duration")
+    private BigDecimal defaultBreakDuration;
+
     @Column(nullable = false)
     private boolean billable = true;
 
@@ -48,6 +51,9 @@ public class Project {
 
     public BigDecimal getDailyHourTarget() { return dailyHourTarget; }
     public void setDailyHourTarget(BigDecimal dailyHourTarget) { this.dailyHourTarget = dailyHourTarget; }
+
+    public BigDecimal getDefaultBreakDuration() { return defaultBreakDuration; }
+    public void setDefaultBreakDuration(BigDecimal defaultBreakDuration) { this.defaultBreakDuration = defaultBreakDuration; }
 
     public boolean isBillable() { return billable; }
     public void setBillable(boolean billable) { this.billable = billable; }

@@ -32,6 +32,9 @@ public class TimeEntry {
 
     private String notes;
 
+    @Column(name = "break_duration", nullable = false)
+    private BigDecimal breakDuration = BigDecimal.ZERO;
+
     @Enumerated(EnumType.STRING)
     @Column(name = "work_location", nullable = false)
     private WorkLocation workLocation = WorkLocation.OFFICE;
@@ -67,6 +70,9 @@ public class TimeEntry {
 
     public String getNotes() { return notes; }
     public void setNotes(String notes) { this.notes = notes; }
+
+    public BigDecimal getBreakDuration() { return breakDuration; }
+    public void setBreakDuration(BigDecimal breakDuration) { this.breakDuration = breakDuration; }
 
     public WorkLocation getWorkLocation() { return workLocation; }
     public void setWorkLocation(WorkLocation workLocation) { this.workLocation = workLocation; }

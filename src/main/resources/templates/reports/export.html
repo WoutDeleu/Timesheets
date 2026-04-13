@@ -38,6 +38,32 @@
                                 </select>
                             </div>
 
+                            <!-- Home overtime cap -->
+                            <div class="mb-3">
+                                <div class="form-check form-switch">
+                                    <input class="form-check-input" type="checkbox" id="capHomeOvertime" name="capHomeOvertime" checked>
+                                    <label class="form-check-label" for="capHomeOvertime">
+                                        Thuiswerk uren begrenzen op dagdoel
+                                    </label>
+                                </div>
+                                <small class="text-muted">
+                                    Indien actief worden thuiswerkuren beperkt tot het dagdoel van het project (bv. 8:00). Overuren thuis worden niet meegerekend.
+                                </small>
+                            </div>
+
+                            <!-- Include times toggle -->
+                            <div class="mb-3">
+                                <div class="form-check form-switch">
+                                    <input class="form-check-input" type="checkbox" id="includeTimes" name="includeTimes">
+                                    <label class="form-check-label" for="includeTimes">
+                                        Begin- en eindtijd opnemen
+                                    </label>
+                                </div>
+                                <small class="text-muted">
+                                    Voegt kolommen voor begin- en eindtijd toe aan de export.
+                                </small>
+                            </div>
+
                             <!-- Export buttons -->
                             <div class="d-flex gap-2">
                                 <button type="button" class="btn btn-primary" onclick="exportAs('csv')">
@@ -58,8 +84,8 @@
                     <div class="card-body">
                         <h6>CSV formaat</h6>
                         <p class="text-muted small">
-                            Puntkomma-gescheiden bestand met kolommen: Datum, Project, Uren, Begintijd, Eindtijd, Factureerbaar, Locatie, Notities.
-                            Geschikt voor Excel en Google Sheets.
+                            Puntkomma-gescheiden bestand met kolommen: Datum, Project, Uren, Pauze, Factureerbaar, Locatie, Notities.
+                            Optioneel met Begin- en Eindtijd. Geschikt voor Excel en Google Sheets.
                         </p>
                         <h6>PDF formaat</h6>
                         <p class="text-muted small">
@@ -82,9 +108,18 @@
                     return;
                 }
 
+                var capHomeOvertime = form.capHomeOvertime.checked;
+                var includeTimes = form.includeTimes.checked;
+
                 var url = '/export/' + format + '?start=' + start + '&end=' + end;
                 if (projectId) {
                     url += '&projectId=' + projectId;
+                }
+                if (capHomeOvertime) {
+                    url += '&capHomeOvertime=true';
+                }
+                if (includeTimes) {
+                    url += '&includeTimes=true';
                 }
                 window.location.href = url;
             }

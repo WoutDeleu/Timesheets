@@ -22,8 +22,8 @@
                     </a>
                 </li>
                 <li class="nav-item">
-                    <a class="nav-link" th:href="@{/time-entry/weekly}" th:classappend="${#strings.equals(currentPage, 'weekly')} ? 'active'">
-                        <i class="bi bi-calendar-week me-1"></i>Weekly
+                    <a class="nav-link" th:href="@{/overview}" th:classappend="${#strings.equals(currentPage, 'overview')} ? 'active'">
+                        <i class="bi bi-calendar-week me-1"></i>Overzicht
                     </a>
                 </li>
                 <li class="nav-item">
@@ -34,16 +34,6 @@
                 <li class="nav-item">
                     <a class="nav-link" th:href="@{/leave}" th:classappend="${#strings.equals(currentPage, 'leave')} ? 'active'">
                         <i class="bi bi-calendar-check me-1"></i>Leave
-                    </a>
-                </li>
-                <li class="nav-item">
-                    <a class="nav-link" th:href="@{/internal}" th:classappend="${#strings.equals(currentPage, 'internal')} ? 'active'">
-                        <i class="bi bi-building me-1"></i>Intern
-                    </a>
-                </li>
-                <li class="nav-item">
-                    <a class="nav-link" th:href="@{/holidays}" th:classappend="${#strings.equals(currentPage, 'holidays')} ? 'active'">
-                        <i class="bi bi-calendar-heart me-1"></i>Holidays
                     </a>
                 </li>
                 <li class="nav-item">

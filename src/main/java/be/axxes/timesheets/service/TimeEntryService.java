@@ -8,7 +8,7 @@ import be.axxes.timesheets.repository.TimeEntryRepository;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-import java.time.DayOfWeek;
+import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.time.temporal.TemporalAdjusters;
 import java.util.List;
@@ -29,13 +29,7 @@ public class TimeEntryService {
         return timeEntryRepository.findByEntryDate(date);
     }
 
-    public List<TimeEntry> getEntriesForWeek(LocalDate anyDayInWeek) {
-        var monday = anyDayInWeek.with(TemporalAdjusters.previousOrSame(DayOfWeek.MONDAY));
-        var friday = monday.plusDays(4);
-        return timeEntryRepository.findByEntryDateBetweenOrderByEntryDateAsc(monday, friday);
-    }
-
-    public List<TimeEntry> getEntriesForMonth(int year, int month) {
+public List<TimeEntry> getEntriesForMonth(int year, int month) {
         var start = LocalDate.of(year, month, 1);
         var end = start.with(TemporalAdjusters.lastDayOfMonth());
         return timeEntryRepository.findByEntryDateBetweenOrderByEntryDateAsc(start, end);
@@ -46,31 +40,44 @@ public class TimeEntryService {
     }
 
     public TimeEntryDto toDto(TimeEntry entry) {
+        var breakDuration = entry.getBreakDuration() != null ? entry.getBreakDuration() : BigDecimal.ZERO;
+        // Return gross hours (net + break) so the UI shows what the user originally entered
+        var grossHours = entry.getHoursWorked().add(breakDuration);
         return new TimeEntryDto(
                 entry.getId(),
                 entry.getEntryDate(),
                 entry.getProject().getId(),
-                entry.getHoursWorked(),
+                grossHours,
                 entry.getStartTime(),
                 entry.getEndTime(),
                 entry.getNotes(),
-                entry.getWorkLocation()
+                entry.getWorkLocation(),
+                breakDuration
         );
     }
 
     @Transactional
     public TimeEntry save(TimeEntryDto dto) {
-        var entry = dto.id() != null
-                ? timeEntryRepository.findById(dto.id())
-                    .orElseThrow(() -> new IllegalArgumentException("Uurregistratie niet gevonden: " + dto.id()))
-                : new TimeEntry();
+        TimeEntry entry;
+        if (dto.id() != null) {
+            entry = timeEntryRepository.findById(dto.id())
+                    .orElseThrow(() -> new IllegalArgumentException("Uurregistratie niet gevonden: " + dto.id()));
+        } else {
+            // Look up existing entry by date+project to support upsert from weekly grid
+            entry = timeEntryRepository.findByEntryDateAndProjectId(dto.entryDate(), dto.projectId())
+                    .orElse(new TimeEntry());
+        }
 
         var project = projectRepository.findById(dto.projectId())
                 .orElseThrow(() -> new IllegalArgumentException("Project niet gevonden: " + dto.projectId()));
 
+        var breakDuration = dto.breakDuration() != null ? dto.breakDuration() : BigDecimal.ZERO;
+        var netHours = dto.hoursWorked().subtract(breakDuration);
+
         entry.setEntryDate(dto.entryDate());
         entry.setProject(project);
-        entry.setHoursWorked(dto.hoursWorked());
+        entry.setHoursWorked(netHours);
+        entry.setBreakDuration(breakDuration);
         entry.setStartTime(dto.startTime());
         entry.setEndTime(dto.endTime());
         entry.setNotes(dto.notes());

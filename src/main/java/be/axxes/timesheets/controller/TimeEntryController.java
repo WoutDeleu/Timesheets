@@ -2,7 +2,10 @@ package be.axxes.timesheets.controller;
 
 import be.axxes.timesheets.dto.TimeEntryDto;
 import be.axxes.timesheets.model.WorkLocation;
+import be.axxes.timesheets.repository.LeaveEntryRepository;
+import be.axxes.timesheets.service.ClockSessionService;
 import be.axxes.timesheets.service.ProjectService;
+import be.axxes.timesheets.service.SettingsService;
 import be.axxes.timesheets.service.TimeEntryService;
 import be.axxes.timesheets.service.HolidayService;
 import jakarta.validation.Valid;
@@ -15,9 +18,6 @@ import org.springframework.web.servlet.mvc.support.RedirectAttributes;
 import java.math.BigDecimal;
 import java.time.DayOfWeek;
 import java.time.LocalDate;
-import java.time.temporal.TemporalAdjusters;
-import java.util.LinkedHashMap;
-import java.util.List;
 
 @Controller
 @RequestMapping("/time-entry")
@@ -26,13 +26,22 @@ public class TimeEntryController {
     private final TimeEntryService timeEntryService;
     private final ProjectService projectService;
     private final HolidayService holidayService;
+    private final SettingsService settingsService;
+    private final LeaveEntryRepository leaveEntryRepository;
+    private final ClockSessionService clockSessionService;
 
     public TimeEntryController(TimeEntryService timeEntryService,
                                ProjectService projectService,
-                               HolidayService holidayService) {
+                               HolidayService holidayService,
+                               SettingsService settingsService,
+                               LeaveEntryRepository leaveEntryRepository,
+                               ClockSessionService clockSessionService) {
         this.timeEntryService = timeEntryService;
         this.projectService = projectService;
         this.holidayService = holidayService;
+        this.settingsService = settingsService;
+        this.leaveEntryRepository = leaveEntryRepository;
+        this.clockSessionService = clockSessionService;
     }
 
     // --- Daily Form ---
@@ -41,19 +50,37 @@ public class TimeEntryController {
     public String dailyView(@RequestParam(required = false) LocalDate date, Model model) {
         var selectedDate = date != null ? date : LocalDate.now();
 
+        var projects = projectService.getAllActiveProjects();
+
+        // Skip weekends when navigating
+        var prevDay = selectedDate.minusDays(1);
+        if (prevDay.getDayOfWeek() == DayOfWeek.SUNDAY) prevDay = prevDay.minusDays(2);
+        else if (prevDay.getDayOfWeek() == DayOfWeek.SATURDAY) prevDay = prevDay.minusDays(1);
+        var nextDay = selectedDate.plusDays(1);
+        if (nextDay.getDayOfWeek() == DayOfWeek.SATURDAY) nextDay = nextDay.plusDays(2);
+        else if (nextDay.getDayOfWeek() == DayOfWeek.SUNDAY) nextDay = nextDay.plusDays(1);
+
         model.addAttribute("currentPage", "time-entry");
         model.addAttribute("selectedDate", selectedDate);
+        model.addAttribute("prevDay", prevDay);
+        model.addAttribute("nextDay", nextDay);
         model.addAttribute("entries", timeEntryService.getEntriesForDate(selectedDate));
-        model.addAttribute("projects", projectService.getAllActiveProjects());
-        model.addAttribute("timeEntry", new TimeEntryDto(null, selectedDate, null, null, null, null, null, WorkLocation.OFFICE));
+        model.addAttribute("projects", projects);
+        if (!model.containsAttribute("timeEntry")) {
+            model.addAttribute("timeEntry", new TimeEntryDto(null, selectedDate, null, null, null, null, null, WorkLocation.OFFICE, BigDecimal.ZERO));
+        }
         model.addAttribute("workLocations", WorkLocation.values());
         model.addAttribute("isHoliday", holidayService.isHoliday(selectedDate));
 
-        // Calculate total hours for the day
-        var totalHours = timeEntryService.getEntriesForDate(selectedDate).stream()
-                .map(e -> e.getHoursWorked())
-                .reduce(BigDecimal.ZERO, BigDecimal::add);
+        // Calculate total gross hours for the day (net + break)
+        var totalHours = computeGrossTotalForDate(selectedDate);
         model.addAttribute("totalHours", totalHours);
+        model.addAttribute("dailyBalance", computeDailyBalance(selectedDate, totalHours));
+
+        // Clock session
+        var activeSession = clockSessionService.getActiveSession();
+        model.addAttribute("clockSession", activeSession.orElse(null));
+        model.addAttribute("clockedIn", activeSession.isPresent());
 
         return "time-entry/daily";
     }
@@ -64,10 +91,30 @@ public class TimeEntryController {
                                  Model model,
                                  RedirectAttributes redirectAttributes) {
         if (result.hasErrors()) {
+            var selectedDate = dto.entryDate() != null ? dto.entryDate() : LocalDate.now();
+            var projects = projectService.getAllActiveProjects();
+
+            var prevDay = selectedDate.minusDays(1);
+            if (prevDay.getDayOfWeek() == DayOfWeek.SUNDAY) prevDay = prevDay.minusDays(2);
+            else if (prevDay.getDayOfWeek() == DayOfWeek.SATURDAY) prevDay = prevDay.minusDays(1);
+            var nextDay = selectedDate.plusDays(1);
+            if (nextDay.getDayOfWeek() == DayOfWeek.SATURDAY) nextDay = nextDay.plusDays(2);
+            else if (nextDay.getDayOfWeek() == DayOfWeek.SUNDAY) nextDay = nextDay.plusDays(1);
+
             model.addAttribute("currentPage", "time-entry");
-            model.addAttribute("selectedDate", dto.entryDate());
-            model.addAttribute("entries", timeEntryService.getEntriesForDate(dto.entryDate()));
-            model.addAttribute("projects", projectService.getAllActiveProjects());
+            model.addAttribute("selectedDate", selectedDate);
+            model.addAttribute("prevDay", prevDay);
+            model.addAttribute("nextDay", nextDay);
+            model.addAttribute("entries", timeEntryService.getEntriesForDate(selectedDate));
+            model.addAttribute("projects", projects);
+            model.addAttribute("workLocations", WorkLocation.values());
+            model.addAttribute("isHoliday", holidayService.isHoliday(selectedDate));
+            var totalHours = computeGrossTotalForDate(selectedDate);
+            model.addAttribute("totalHours", totalHours);
+            model.addAttribute("dailyBalance", computeDailyBalance(selectedDate, totalHours));
+            var activeSession = clockSessionService.getActiveSession();
+            model.addAttribute("clockSession", activeSession.orElse(null));
+            model.addAttribute("clockedIn", activeSession.isPresent());
             return "time-entry/daily";
         }
         timeEntryService.save(dto);
@@ -84,105 +131,93 @@ public class TimeEntryController {
         return "redirect:/time-entry?date=" + date;
     }
 
-    // --- Weekly Grid ---
+    // --- Clock In/Out ---
 
-    @GetMapping("/weekly")
-    public String weeklyView(@RequestParam(required = false) LocalDate week, Model model) {
-        var monday = (week != null ? week : LocalDate.now())
-                .with(TemporalAdjusters.previousOrSame(DayOfWeek.MONDAY));
-        var friday = monday.plusDays(4);
-
-        var entries = timeEntryService.getEntriesForWeek(monday);
-        var projects = projectService.getAllActiveProjects();
-
-        // Build a grid: project -> day -> hours
-        var weekDays = List.of(monday, monday.plusDays(1), monday.plusDays(2),
-                monday.plusDays(3), friday);
-
-        var grid = new LinkedHashMap<Long, LinkedHashMap<LocalDate, BigDecimal>>();
-        var locationGrid = new LinkedHashMap<Long, LinkedHashMap<LocalDate, WorkLocation>>();
-        for (var project : projects) {
-            var dayMap = new LinkedHashMap<LocalDate, BigDecimal>();
-            var locMap = new LinkedHashMap<LocalDate, WorkLocation>();
-            for (var day : weekDays) {
-                dayMap.put(day, BigDecimal.ZERO);
-                locMap.put(day, WorkLocation.OFFICE);
-            }
-            grid.put(project.getId(), dayMap);
-            locationGrid.put(project.getId(), locMap);
+    @PostMapping("/clock-in")
+    public String clockIn(@RequestParam Long projectId,
+                          @RequestParam(required = false) WorkLocation workLocation,
+                          RedirectAttributes redirectAttributes) {
+        try {
+            clockSessionService.clockIn(projectId, workLocation);
+            redirectAttributes.addFlashAttribute("success", "Ingeklokt");
+        } catch (IllegalStateException | IllegalArgumentException e) {
+            redirectAttributes.addFlashAttribute("error", e.getMessage());
         }
-
-        for (var entry : entries) {
-            var projectId = entry.getProject().getId();
-            if (grid.containsKey(projectId)) {
-                var hours = entry.getHoursWorked() != null ? entry.getHoursWorked() : BigDecimal.ZERO;
-                grid.get(projectId).put(entry.getEntryDate(), hours);
-                locationGrid.get(projectId).put(entry.getEntryDate(),
-                        entry.getWorkLocation() != null ? entry.getWorkLocation() : WorkLocation.OFFICE);
-            }
-        }
-
-        // Calculate row totals per project
-        var rowTotals = new LinkedHashMap<Long, BigDecimal>();
-        for (var entry : grid.entrySet()) {
-            var total = entry.getValue().values().stream()
-                    .reduce(BigDecimal.ZERO, BigDecimal::add);
-            rowTotals.put(entry.getKey(), total);
-        }
-
-        // Check which days are holidays
-        var holidays = new LinkedHashMap<LocalDate, Boolean>();
-        for (var day : weekDays) {
-            holidays.put(day, holidayService.isHoliday(day));
-        }
-
-        model.addAttribute("currentPage", "weekly");
-        model.addAttribute("monday", monday);
-        model.addAttribute("friday", friday);
-        model.addAttribute("weekDays", weekDays);
-        model.addAttribute("projects", projects);
-        model.addAttribute("grid", grid);
-        model.addAttribute("locationGrid", locationGrid);
-        model.addAttribute("workLocations", WorkLocation.values());
-        model.addAttribute("holidays", holidays);
-        model.addAttribute("rowTotals", rowTotals);
-        model.addAttribute("prevWeek", monday.minusWeeks(1));
-        model.addAttribute("nextWeek", monday.plusWeeks(1));
-
-        return "time-entry/weekly";
+        return "redirect:/time-entry";
     }
 
-    @PostMapping("/weekly")
-    public String saveWeeklyEntries(@RequestParam LocalDate monday,
-                                    @RequestParam java.util.Map<String, String> allParams,
-                                    RedirectAttributes redirectAttributes) {
-        // Params come as "hours_{projectId}_{date}" = "value"
-        for (var param : allParams.entrySet()) {
-            if (!param.getKey().startsWith("hours_")) continue;
+    @PostMapping("/clock-out")
+    public String clockOut(RedirectAttributes redirectAttributes) {
+        try {
+            var dto = clockSessionService.clockOut();
+            redirectAttributes.addFlashAttribute("timeEntry", dto);
+            redirectAttributes.addFlashAttribute("success", "Uitgeklokt — controleer en sla de uren op.");
+        } catch (IllegalStateException e) {
+            redirectAttributes.addFlashAttribute("error", e.getMessage());
+        }
+        return "redirect:/time-entry";
+    }
 
-            var parts = param.getKey().split("_");
-            if (parts.length != 3) continue;
+    @PostMapping("/clock-break-start")
+    public String startBreak(RedirectAttributes redirectAttributes) {
+        try {
+            clockSessionService.startBreak();
+            redirectAttributes.addFlashAttribute("success", "Pauze gestart");
+        } catch (IllegalStateException e) {
+            redirectAttributes.addFlashAttribute("error", e.getMessage());
+        }
+        return "redirect:/time-entry";
+    }
 
-            var projectId = Long.parseLong(parts[1]);
-            var date = LocalDate.parse(parts[2]);
-            var value = param.getValue().trim();
+    @PostMapping("/clock-break-end")
+    public String endBreak(RedirectAttributes redirectAttributes) {
+        try {
+            clockSessionService.endBreak();
+            redirectAttributes.addFlashAttribute("success", "Pauze beëindigd");
+        } catch (IllegalStateException e) {
+            redirectAttributes.addFlashAttribute("error", e.getMessage());
+        }
+        return "redirect:/time-entry";
+    }
 
-            if (value.isEmpty() || "0".equals(value)) {
-                // If there was an existing entry, we could delete it — for now skip
-                continue;
-            }
+    @PostMapping("/clock-cancel")
+    public String cancelClock(RedirectAttributes redirectAttributes) {
+        try {
+            clockSessionService.cancel();
+            redirectAttributes.addFlashAttribute("success", "Kloksessie geannuleerd");
+        } catch (IllegalStateException e) {
+            redirectAttributes.addFlashAttribute("error", e.getMessage());
+        }
+        return "redirect:/time-entry";
+    }
 
-            var hours = new BigDecimal(value.replace(",", "."));
-            if (hours.compareTo(BigDecimal.ZERO) > 0) {
-                var locationKey = "location_" + projectId + "_" + date;
-                var locationValue = allParams.getOrDefault(locationKey, "OFFICE");
-                var workLocation = WorkLocation.valueOf(locationValue);
-                var dto = new TimeEntryDto(null, date, projectId, hours, null, null, null, workLocation);
-                timeEntryService.save(dto);
-            }
+    private BigDecimal computeGrossTotalForDate(LocalDate date) {
+        return timeEntryService.getEntriesForDate(date).stream()
+                .map(e -> e.getHoursWorked().add(e.getBreakDuration() != null ? e.getBreakDuration() : BigDecimal.ZERO))
+                .reduce(BigDecimal.ZERO, BigDecimal::add);
+    }
+
+    private BigDecimal computeDailyBalance(LocalDate date, BigDecimal grossTotal) {
+        var entries = timeEntryService.getEntriesForDate(date);
+
+        // Per-project balance: net hours (hoursWorked) minus project daily target
+        var projectNetHours = new java.util.HashMap<Long, BigDecimal>();
+        for (var entry : entries) {
+            var pid = entry.getProject().getId();
+            var hours = entry.getHoursWorked() != null ? entry.getHoursWorked() : BigDecimal.ZERO;
+            projectNetHours.merge(pid, hours, BigDecimal::add);
         }
 
-        redirectAttributes.addFlashAttribute("success", "Week opgeslagen");
-        return "redirect:/time-entry/weekly?week=" + monday;
+        var balance = BigDecimal.ZERO;
+        for (var pid : projectNetHours.keySet()) {
+            var project = entries.stream()
+                    .filter(te -> te.getProject().getId().equals(pid))
+                    .findFirst().get().getProject();
+            var dailyTarget = project.getDailyHourTarget() != null
+                    ? project.getDailyHourTarget()
+                    : settingsService.getDefaultDailyHours();
+            balance = balance.add(projectNetHours.get(pid).subtract(dailyTarget));
+        }
+        return balance;
     }
 }

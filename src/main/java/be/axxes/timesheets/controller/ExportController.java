@@ -29,8 +29,10 @@ public class ExportController {
     @GetMapping("/csv")
     public ResponseEntity<byte[]> exportCsv(@RequestParam LocalDate start,
                                              @RequestParam LocalDate end,
-                                             @RequestParam(required = false) Long projectId) throws Exception {
-        var csv = exportService.exportToCsv(start, end, projectId);
+                                             @RequestParam(required = false) Long projectId,
+                                             @RequestParam(required = false, defaultValue = "false") boolean capHomeOvertime,
+                                             @RequestParam(required = false, defaultValue = "false") boolean includeTimes) throws Exception {
+        var csv = exportService.exportToCsv(start, end, projectId, capHomeOvertime, includeTimes);
         var filename = "timesheets_" + start.format(FILE_DATE_FMT) + "_" + end.format(FILE_DATE_FMT) + ".csv";
 
         return ResponseEntity.ok()
@@ -42,8 +44,10 @@ public class ExportController {
     @GetMapping("/pdf")
     public ResponseEntity<byte[]> exportPdf(@RequestParam LocalDate start,
                                              @RequestParam LocalDate end,
-                                             @RequestParam(required = false) Long projectId) throws Exception {
-        var html = exportService.generatePdfHtml(start, end, projectId);
+                                             @RequestParam(required = false) Long projectId,
+                                             @RequestParam(required = false, defaultValue = "false") boolean capHomeOvertime,
+                                             @RequestParam(required = false, defaultValue = "false") boolean includeTimes) throws Exception {
+        var html = exportService.generatePdfHtml(start, end, projectId, capHomeOvertime, includeTimes);
         var filename = "timesheets_" + start.format(FILE_DATE_FMT) + "_" + end.format(FILE_DATE_FMT) + ".pdf";
 
         var outputStream = new ByteArrayOutputStream();

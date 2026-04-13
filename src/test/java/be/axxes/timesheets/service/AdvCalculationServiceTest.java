@@ -4,7 +4,6 @@ import be.axxes.timesheets.model.LeaveEntry;
 import be.axxes.timesheets.model.LeaveType;
 import be.axxes.timesheets.model.Project;
 import be.axxes.timesheets.model.TimeEntry;
-import be.axxes.timesheets.repository.InternalActivityRepository;
 import be.axxes.timesheets.repository.LeaveEntryRepository;
 import be.axxes.timesheets.repository.TimeEntryRepository;
 import org.junit.jupiter.api.BeforeEach;
@@ -19,6 +18,7 @@ import java.util.List;
 
 import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.when;
 
 @ExtendWith(MockitoExtension.class)
@@ -31,16 +31,16 @@ class AdvCalculationServiceTest {
     private LeaveEntryRepository leaveEntryRepository;
 
     @Mock
-    private InternalActivityRepository internalActivityRepository;
+    private SettingsService settingsService;
 
     @Mock
-    private SettingsService settingsService;
+    private HolidayService holidayService;
 
     private AdvCalculationService advCalculationService;
 
     @BeforeEach
     void setUp() {
-        advCalculationService = new AdvCalculationService(timeEntryRepository, leaveEntryRepository, internalActivityRepository, settingsService);
+        advCalculationService = new AdvCalculationService(timeEntryRepository, leaveEntryRepository, settingsService, holidayService);
         when(settingsService.getAdvDailySurplusHours()).thenReturn(new BigDecimal("0.4"));
     }
 
@@ -167,6 +167,28 @@ class AdvCalculationServiceTest {
 
         var surplus = advCalculationService.calculateAccumulatedSurplusHours(2026);
         assertEquals(0, new BigDecimal("0.4").compareTo(surplus));
+    }
+
+    @Test
+    void shouldPredictYearEndAdvDaysAccountingForLeaveAndHolidays() {
+        var year = LocalDate.now().getYear();
+
+        // No time entries yet (start of year scenario) — current surplus = 0
+        when(timeEntryRepository.findByEntryDateBetweenOrderByEntryDateAsc(any(), any())).thenReturn(List.of());
+        when(leaveEntryRepository.findByEntryDateBetweenOrderByEntryDateAsc(any(), any())).thenReturn(List.of());
+        when(holidayService.getHolidaysForYear(year)).thenReturn(List.of());
+        when(settingsService.getAdvDayHours()).thenReturn(new BigDecimal("7.6"));
+        when(settingsService.getVacationDaysPerYear()).thenReturn(20);
+        when(settingsService.getSickDaysWithoutNotePerYear()).thenReturn(3);
+        when(leaveEntryRepository.countByLeaveTypeAndEntryDateBetween(eq(LeaveType.VACATION), any(), any())).thenReturn(0L);
+        when(leaveEntryRepository.countByLeaveTypeAndEntryDateBetween(eq(LeaveType.ADV), any(), any())).thenReturn(0L);
+        when(leaveEntryRepository.countByLeaveTypeAndDoctorsNoteAndEntryDateBetween(eq(LeaveType.SICK), eq(false), any(), any())).thenReturn(0L);
+
+        var predicted = advCalculationService.predictYearEndAdvDays(year);
+
+        // Predicted should be >= 0 and reasonable (less than ~13 ADV days for a full year)
+        assertTrue(predicted.compareTo(BigDecimal.ZERO) >= 0, "Predicted ADV days should be non-negative");
+        assertTrue(predicted.compareTo(new BigDecimal("15")) < 0, "Predicted ADV days should be reasonable");
     }
 
     private Project createProject() {

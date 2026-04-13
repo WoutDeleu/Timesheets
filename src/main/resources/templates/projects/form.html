@@ -34,12 +34,24 @@
                     <div class="mb-3">
                         <label for="dailyHourTarget" class="form-label">Dagelijks urendoel</label>
                         <div class="input-group" style="max-width: 200px;">
-                            <input type="number" class="form-control" id="dailyHourTarget"
+                            <input type="text" class="form-control hour-input" id="dailyHourTarget"
                                    th:field="*{dailyHourTarget}"
-                                   step="0.1" min="0" max="24" placeholder="bv. 8,0">
+                                   placeholder="bv. 8:00">
                             <span class="input-group-text">uur</span>
                         </div>
-                        <div class="form-text">Laat leeg om het globale standaard (7,6u) te gebruiken. Uren boven dit doel worden als overuren geteld.</div>
+                        <div class="form-text">Laat leeg om het globale standaard (7:36) te gebruiken. Uren boven dit doel worden als overuren geteld.</div>
+                    </div>
+
+                    <!-- Default break duration -->
+                    <div class="mb-3">
+                        <label for="defaultBreakDuration" class="form-label">Standaard pauze</label>
+                        <div class="input-group" style="max-width: 200px;">
+                            <input type="text" class="form-control hour-input" id="defaultBreakDuration"
+                                   th:field="*{defaultBreakDuration}"
+                                   placeholder="bv. 0:30">
+                            <span class="input-group-text">uur</span>
+                        </div>
+                        <div class="form-text">Standaard pauze bij werken op kantoor. Thuis is altijd 0. Laat leeg voor geen pauze.</div>
                     </div>
 
                     <!-- Billable -->

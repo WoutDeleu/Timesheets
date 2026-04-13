@@ -28,10 +28,9 @@ target/
 *.log
 spring-shell.log
 
-# H2 Database (local data lives in ~/.timesheets/)
-*.db
-*.trace.db
-*.lock.db
+# H2 Database (keep .mv.db for backup, exclude runtime files)
+data/*.trace.db
+data/*.lock.db
 
 # Environment
 .env

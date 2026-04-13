@@ -1,16 +1,18 @@
 package be.axxes.timesheets.service;
 
 import be.axxes.timesheets.model.LeaveType;
-import be.axxes.timesheets.repository.InternalActivityRepository;
 import be.axxes.timesheets.repository.LeaveEntryRepository;
 import be.axxes.timesheets.repository.TimeEntryRepository;
 import org.springframework.stereotype.Service;
+
+import be.axxes.timesheets.model.LeaveEntry;
 
 import java.math.BigDecimal;
 import java.math.RoundingMode;
 import java.time.DayOfWeek;
 import java.time.LocalDate;
 import java.util.HashMap;
+import java.util.Set;
 import java.util.stream.Collectors;
 
 /**
@@ -30,17 +32,17 @@ public class AdvCalculationService {
 
     private final TimeEntryRepository timeEntryRepository;
     private final LeaveEntryRepository leaveEntryRepository;
-    private final InternalActivityRepository internalActivityRepository;
     private final SettingsService settingsService;
+    private final HolidayService holidayService;
 
     public AdvCalculationService(TimeEntryRepository timeEntryRepository,
                                  LeaveEntryRepository leaveEntryRepository,
-                                 InternalActivityRepository internalActivityRepository,
-                                 SettingsService settingsService) {
+                                 SettingsService settingsService,
+                                 HolidayService holidayService) {
         this.timeEntryRepository = timeEntryRepository;
         this.leaveEntryRepository = leaveEntryRepository;
-        this.internalActivityRepository = internalActivityRepository;
         this.settingsService = settingsService;
+        this.holidayService = holidayService;
     }
 
     /**
@@ -60,13 +62,6 @@ public class AdvCalculationService {
                         e -> e.getEntryDate(),
                         Collectors.reducing(BigDecimal.ZERO, e -> e.getHoursWorked(), BigDecimal::add)
                 )));
-
-        // Include internal activity hours in daily totals
-        var internalActivities = internalActivityRepository
-                .findByActivityDateBetweenOrderByActivityDateAsc(start, end);
-        for (var activity : internalActivities) {
-            hoursPerDay.merge(activity.getActivityDate(), activity.getHours(), BigDecimal::add);
-        }
 
         // Get leave dates — these don't contribute
         var leaveDates = leaveEntryRepository.findByEntryDateBetweenOrderByEntryDateAsc(start, end)
@@ -131,5 +126,77 @@ public class AdvCalculationService {
      */
     public BigDecimal getSurplusHours(int year) {
         return calculateAccumulatedSurplusHours(year);
+    }
+
+    /**
+     * Predict total ADV days earned by year-end.
+     *
+     * Assumes all remaining vacation days, ALL ADV days (including newly earned ones),
+     * and sick days without doctor's note will be taken. These are 7.6h days and
+     * do NOT contribute to ADV surplus.
+     *
+     * Holidays (national, company, compensatory) also do not contribute.
+     *
+     * All other remaining workdays are assumed to be 8h days contributing 0.4h surplus each.
+     *
+     * The calculation is circular: future workdays earn ADV, but those ADV days will also
+     * be taken (reducing contributing workdays). Solved algebraically:
+     *
+     *   Let D = total predicted ADV days, C = contributing workdays
+     *   C = W - V - S - (D - A_used)     [W=future workdays, V=vacation, S=sick, A_used=ADV already taken]
+     *   D = (S_current + C * surplus) / advDayHours
+     *
+     *   Solving: D = (S_current + (W - V - S + A_used) * surplus) / (advDayHours + surplus)
+     *   With defaults: D = (S_current + (W - V - S + A_used) * 0.4) / 8.0
+     */
+    public BigDecimal predictYearEndAdvDays(int year) {
+        var today = LocalDate.now();
+        var endOfYear = LocalDate.of(year, 12, 31);
+        var surplusPerDay = settingsService.getAdvDailySurplusHours();
+        var advDayHours = settingsService.getAdvDayHours();
+
+        // Current surplus already accumulated
+        var currentSurplus = calculateAccumulatedSurplusHours(year);
+
+        // Collect all holiday dates
+        var holidays = holidayService.getHolidaysForYear(year);
+        var holidayDates = holidays.stream()
+                .map(h -> h.getHolidayDate())
+                .collect(Collectors.toSet());
+
+        // Count future workdays (tomorrow onwards, excluding weekends and holidays)
+        long futureWorkdays = 0;
+        var date = today.plusDays(1);
+        while (!date.isAfter(endOfYear)) {
+            if (date.getDayOfWeek() != DayOfWeek.SATURDAY
+                    && date.getDayOfWeek() != DayOfWeek.SUNDAY
+                    && !holidayDates.contains(date)) {
+                futureWorkdays++;
+            }
+            date = date.plusDays(1);
+        }
+
+        // Remaining vacation days
+        long vacationTotal = settingsService.getVacationDaysPerYear();
+        long vacationUsed = leaveEntryRepository.countByLeaveTypeAndEntryDateBetween(
+                LeaveType.VACATION, LocalDate.of(year, 1, 1), endOfYear);
+        long vacationRemaining = Math.max(0, vacationTotal - vacationUsed);
+
+        // ADV days already taken this year
+        long advUsed = calculateUsedAdvDays(year);
+
+        // Remaining sick days without doctor's note
+        long sickWithoutNoteTotal = settingsService.getSickDaysWithoutNotePerYear();
+        long sickWithoutNoteUsed = leaveEntryRepository.countByLeaveTypeAndDoctorsNoteAndEntryDateBetween(
+                LeaveType.SICK, false, LocalDate.of(year, 1, 1), endOfYear);
+        long sickWithoutNoteRemaining = Math.max(0, sickWithoutNoteTotal - sickWithoutNoteUsed);
+
+        // Algebraic solution accounting for the circular dependency:
+        // newly earned ADV days will also be taken, reducing contributing workdays
+        long availableDays = futureWorkdays - vacationRemaining - sickWithoutNoteRemaining + advUsed;
+        var numerator = currentSurplus.add(surplusPerDay.multiply(BigDecimal.valueOf(Math.max(0, availableDays))));
+        var denominator = advDayHours.add(surplusPerDay);
+
+        return numerator.divide(denominator, 2, RoundingMode.FLOOR);
     }
 }

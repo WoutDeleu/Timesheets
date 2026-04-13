@@ -36,6 +36,7 @@ public class ProjectService {
                 project.getName(),
                 project.getDescription(),
                 project.getDailyHourTarget(),
+                project.getDefaultBreakDuration(),
                 project.isBillable(),
                 project.isActive()
         );
@@ -73,6 +74,7 @@ public class ProjectService {
         project.setName(dto.getName());
         project.setDescription(dto.getDescription());
         project.setDailyHourTarget(dto.getDailyHourTarget());
+        project.setDefaultBreakDuration(dto.getDefaultBreakDuration());
         project.setBillable(dto.isBillable());
         project.setActive(dto.isActive());
     }

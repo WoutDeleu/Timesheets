@@ -114,6 +114,27 @@ src/
 - H2 console available at `/h2-console` in dev mode
 - JDBC URL: `jdbc:h2:file:~/.timesheets/data/timesheets`
 
+## Parallel Development Workflow
+
+Multiple Claude Code windows can work on different features simultaneously using git worktrees. Each window gets an isolated copy of the repo on its own branch, avoiding conflicts during development.
+
+### Starting a feature
+Use `/start-feature <name>` (e.g., `/start-feature feature/add-reporting`). This creates an isolated worktree and branch so your work does not interfere with other windows.
+
+### Finishing a feature
+Use `/finish-feature` to merge the current feature branch back into main. This will:
+1. Commit any remaining changes
+2. Run tests
+3. Merge into main (resolving conflicts if needed)
+4. Run tests again post-merge
+5. Clean up the worktree
+
+### Rules for parallel work
+- **Always use worktrees** — never work directly on `main` when implementing features
+- **Run tests before merging** — ensure the feature works in isolation first
+- **Resolve conflicts carefully** — when merging, understand both sides before resolving
+- **One merge at a time** — if two features finish simultaneously, merge them sequentially to keep conflict resolution manageable
+
 ## Important Notes
 - This is a LOCAL app — no cloud, no external APIs, no internet required at runtime
 - Single user — no authentication, no multi-tenancy

@@ -44,6 +44,7 @@ public class DashboardController {
         model.addAttribute("advEarned", advCalculationService.calculateEarnedAdvDays(year));
         model.addAttribute("advUsed", advCalculationService.calculateUsedAdvDays(year));
         model.addAttribute("advBalance", advCalculationService.calculateAdvBalance(year));
+        model.addAttribute("advPredicted", advCalculationService.predictYearEndAdvDays(year));
 
         // Overtime per project
         var overtimeMap = overtimeService.calculateOvertimeForAllProjects(year);
@@ -54,7 +55,7 @@ public class DashboardController {
         var today = LocalDate.now();
         var todayEntries = timeEntryService.getEntriesForDate(today);
         var todayTotal = todayEntries.stream()
-                .map(e -> e.getHoursWorked())
+                .map(e -> e.getHoursWorked().add(e.getBreakDuration() != null ? e.getBreakDuration() : BigDecimal.ZERO))
                 .reduce(BigDecimal.ZERO, BigDecimal::add);
         model.addAttribute("todayEntries", todayEntries);
         model.addAttribute("todayTotal", todayTotal);

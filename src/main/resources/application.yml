@@ -3,7 +3,7 @@ spring:
     name: timesheets
 
   datasource:
-    url: jdbc:h2:file:~/.timesheets/data/timesheets;AUTO_SERVER=TRUE
+    url: jdbc:h2:file:./data/timesheets;AUTO_SERVER=TRUE
     driver-class-name: org.h2.Driver
     username: sa
     password:

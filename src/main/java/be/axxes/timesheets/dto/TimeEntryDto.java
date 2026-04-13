@@ -26,9 +26,11 @@ public record TimeEntryDto(
 
         String notes,
 
-        WorkLocation workLocation
+        WorkLocation workLocation,
+
+        BigDecimal breakDuration
 ) {
     public TimeEntryDto() {
-        this(null, LocalDate.now(), null, null, null, null, null, WorkLocation.OFFICE);
+        this(null, LocalDate.now(), null, null, null, null, null, WorkLocation.OFFICE, BigDecimal.ZERO);
     }
 }

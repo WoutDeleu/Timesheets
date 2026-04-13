@@ -28,7 +28,7 @@
                 <div class="card text-center">
                     <div class="card-body">
                         <h6 class="text-muted">Totaal uren</h6>
-                        <h3 th:text="${#numbers.formatDecimal(summary.totalHours(), 1, 1, 'COMMA')} + 'u'"></h3>
+                        <h3 th:text="${hourFmt.format(summary.totalHours())}"></h3>
                     </div>
                 </div>
             </div>
@@ -45,7 +45,7 @@
                     <div class="card-body">
                         <h6 class="text-muted">Overuren</h6>
                         <h3 th:classappend="${summary.overtimeHours().signum() >= 0} ? 'saldo-positive' : 'saldo-negative'"
-                            th:text="${#numbers.formatDecimal(summary.overtimeHours(), 1, 1, 'COMMA')} + 'u'"></h3>
+                            th:text="${hourFmt.format(summary.overtimeHours())}"></h3>
                     </div>
                 </div>
             </div>
@@ -79,10 +79,10 @@
                         <tr th:each="ps : ${summary.projectSummaries()}">
                             <td th:text="${ps.projectName()}"></td>
                             <td class="text-center" th:text="${ps.daysWorked()}"></td>
-                            <td class="text-center" th:text="${#numbers.formatDecimal(ps.totalHours(), 1, 1, 'COMMA')} + 'u'"></td>
+                            <td class="text-center" th:text="${hourFmt.format(ps.totalHours())}"></td>
                             <td class="text-center"
                                 th:classappend="${ps.overtimeHours().signum() >= 0} ? 'saldo-positive' : 'saldo-negative'"
-                                th:text="${#numbers.formatDecimal(ps.overtimeHours(), 1, 1, 'COMMA')} + 'u'"></td>
+                                th:text="${hourFmt.format(ps.overtimeHours())}"></td>
                             <td class="text-center">
                                 <span th:if="${ps.billable()}" class="badge bg-success">Factureerbaar</span>
                                 <span th:unless="${ps.billable()}" class="badge bg-secondary">Intern</span>
@@ -93,10 +93,10 @@
                         <tr class="fw-bold">
                             <td>Totaal</td>
                             <td class="text-center" th:text="${summary.workDays()}"></td>
-                            <td class="text-center" th:text="${#numbers.formatDecimal(summary.totalHours(), 1, 1, 'COMMA')} + 'u'"></td>
+                            <td class="text-center" th:text="${hourFmt.format(summary.totalHours())}"></td>
                             <td class="text-center"
                                 th:classappend="${summary.overtimeHours().signum() >= 0} ? 'saldo-positive' : 'saldo-negative'"
-                                th:text="${#numbers.formatDecimal(summary.overtimeHours(), 1, 1, 'COMMA')} + 'u'"></td>
+                                th:text="${hourFmt.format(summary.overtimeHours())}"></td>
                             <td></td>
                         </tr>
                     </tfoot>
@@ -137,11 +137,11 @@
                         <table class="table table-sm mb-0">
                             <tr>
                                 <td>Factureerbaar</td>
-                                <td class="text-end fw-bold" th:text="${#numbers.formatDecimal(summary.billableHours(), 1, 1, 'COMMA')} + 'u'"></td>
+                                <td class="text-end fw-bold" th:text="${hourFmt.format(summary.billableHours())}"></td>
                             </tr>
                             <tr>
                                 <td>Intern</td>
-                                <td class="text-end" th:text="${#numbers.formatDecimal(summary.nonBillableHours(), 1, 1, 'COMMA')} + 'u'"></td>
+                                <td class="text-end" th:text="${hourFmt.format(summary.nonBillableHours())}"></td>
                             </tr>
                         </table>
                     </div>

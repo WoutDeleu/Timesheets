@@ -52,7 +52,7 @@
                     <div class="card-body">
                         <h6 class="text-muted">Overuren</h6>
                         <h4 th:classappend="${totalOvertime.signum() >= 0} ? 'saldo-positive' : 'saldo-negative'"
-                            th:text="${#numbers.formatDecimal(totalOvertime, 1, 1, 'COMMA')} + 'u'"></h4>
+                            th:text="${hourFmt.format(totalOvertime)}"></h4>
                         <small class="text-muted">Alle projecten</small>
                     </div>
                 </div>
@@ -85,12 +85,12 @@
                                 <td th:text="${ms.monthName()}"></td>
                                 <td class="text-center" th:text="${ms.workDays()}"></td>
                                 <td class="text-center"
-                                    th:text="${#numbers.formatDecimal(ms.totalHours(), 1, 1, 'COMMA')} + 'u'"></td>
+                                    th:text="${hourFmt.format(ms.totalHours())}"></td>
                                 <td class="text-center"
-                                    th:text="${#numbers.formatDecimal(ms.billableHours(), 1, 1, 'COMMA')} + 'u'"></td>
+                                    th:text="${hourFmt.format(ms.billableHours())}"></td>
                                 <td class="text-center"
                                     th:classappend="${ms.overtimeHours().signum() >= 0} ? 'saldo-positive' : 'saldo-negative'"
-                                    th:text="${#numbers.formatDecimal(ms.overtimeHours(), 1, 1, 'COMMA')} + 'u'"></td>
+                                    th:text="${hourFmt.format(ms.overtimeHours())}"></td>
                                 <td class="text-center" th:text="${ms.vacationDays()}"></td>
                                 <td class="text-center" th:text="${ms.sickDays()}"></td>
                                 <td class="text-center" th:text="${ms.advDays()}"></td>

@@ -11,7 +11,7 @@
 
         <!-- Date navigation -->
         <div class="d-flex align-items-center mb-4">
-            <a th:href="@{/time-entry(date=${selectedDate.minusDays(1)})}" class="btn btn-outline-secondary me-2">
+            <a th:href="@{/time-entry(date=${prevDay})}" class="btn btn-outline-secondary me-2">
                 <i class="bi bi-chevron-left"></i>
             </a>
             <form class="d-inline">
@@ -20,7 +20,7 @@
                        th:value="${selectedDate}"
                        onchange="this.form.submit()">
             </form>
-            <a th:href="@{/time-entry(date=${selectedDate.plusDays(1)})}" class="btn btn-outline-secondary ms-2">
+            <a th:href="@{/time-entry(date=${nextDay})}" class="btn btn-outline-secondary ms-2">
                 <i class="bi bi-chevron-right"></i>
             </a>
             <a th:href="@{/time-entry}" class="btn btn-outline-primary ms-3">Vandaag</a>
@@ -35,15 +35,137 @@
             <span th:text="${success}"></span>
             <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
         </div>
+        <!-- Error message -->
+        <div th:if="${error}" class="alert alert-danger alert-dismissible fade show" role="alert">
+            <span th:text="${error}"></span>
+            <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+        </div>
+
+        <!-- Clock In/Out Section -->
+        <!-- State A: Not clocked in -->
+        <div class="card mb-4" th:unless="${clockedIn}">
+            <div class="card-header">
+                <i class="bi bi-clock me-1"></i>Klok in / uit
+            </div>
+            <div class="card-body">
+                <form th:action="@{/time-entry/clock-in}" method="post" class="row align-items-end g-3">
+                    <div class="col-md-5">
+                        <label class="form-label">Project *</label>
+                        <div class="d-flex flex-wrap gap-2">
+                            <div th:each="p : ${projects}">
+                                <input type="radio" class="btn-check" autocomplete="off"
+                                       name="projectId"
+                                       th:id="'clockProj_' + ${p.id}"
+                                       th:value="${p.id}">
+                                <label class="btn btn-outline-primary"
+                                       th:for="'clockProj_' + ${p.id}"
+                                       th:text="${p.name}"></label>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-md-4">
+                        <label class="form-label">Locatie</label>
+                        <div class="d-flex gap-2">
+                            <input type="radio" class="btn-check" name="workLocation"
+                                   id="clockLocOffice" value="OFFICE" checked>
+                            <label class="btn btn-outline-secondary" for="clockLocOffice">
+                                <i class="bi bi-building me-1"></i>Kantoor
+                            </label>
+                            <input type="radio" class="btn-check" name="workLocation"
+                                   id="clockLocHome" value="HOME">
+                            <label class="btn btn-outline-secondary" for="clockLocHome">
+                                <i class="bi bi-house me-1"></i>Thuis
+                            </label>
+                        </div>
+                    </div>
+                    <div class="col-md-3">
+                        <button type="submit" class="btn btn-success w-100">
+                            <i class="bi bi-play-circle me-1"></i>Inklokken
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+
+        <!-- State B: Clocked in -->
+        <div class="card mb-4" th:if="${clockedIn}"
+             th:classappend="${clockSession.breakStart != null} ? 'border-warning' : 'border-success'">
+            <div class="card-header text-white d-flex justify-content-between align-items-center"
+                 th:classappend="${clockSession.breakStart != null} ? 'bg-warning text-dark' : 'bg-success'">
+                <span>
+                    <i class="bi bi-clock-fill me-1"></i>
+                    <span th:if="${clockSession.breakStart == null}">Ingeklokt</span>
+                    <span th:if="${clockSession.breakStart != null}">Op pauze</span>
+                    <span class="ms-2 fw-bold" th:text="${clockSession.project.name}"></span>
+                    <span class="ms-2 badge bg-light text-dark"
+                          th:text="${clockSession.workLocation.displayName}"></span>
+                    <span th:if="${clockSession.sessionDate != selectedDate}"
+                          class="ms-2 badge bg-light text-dark"
+                          th:text="'Gestart op ' + ${#temporals.format(clockSession.sessionDate, 'dd/MM/yyyy')}"></span>
+                </span>
+                <span id="clockTimer" class="fw-bold fs-5"
+                      th:data-clock-in="${#temporals.format(clockSession.clockInTime, 'yyyy-MM-dd''T''HH:mm:ss')}"
+                      th:data-break-seconds="${clockSession.totalBreakSeconds}"
+                      th:data-break-start="${clockSession.breakStart != null ? #temporals.format(clockSession.breakStart, 'yyyy-MM-dd''T''HH:mm:ss') : ''}">
+                    --:--:--
+                </span>
+            </div>
+            <div class="card-body">
+                <div class="d-flex gap-2 align-items-center flex-wrap">
+                    <!-- Break buttons -->
+                    <form th:if="${clockSession.breakStart == null}"
+                          th:action="@{/time-entry/clock-break-start}" method="post" class="d-inline">
+                        <button type="submit" class="btn btn-warning">
+                            <i class="bi bi-cup-hot me-1"></i>Start pauze
+                        </button>
+                    </form>
+                    <form th:if="${clockSession.breakStart != null}"
+                          th:action="@{/time-entry/clock-break-end}" method="post" class="d-inline">
+                        <button type="submit" class="btn btn-info">
+                            <i class="bi bi-cup-hot-fill me-1"></i>Einde pauze
+                        </button>
+                    </form>
+
+                    <!-- Clock out -->
+                    <form th:action="@{/time-entry/clock-out}" method="post" class="d-inline">
+                        <button type="submit" class="btn btn-danger">
+                            <i class="bi bi-stop-circle me-1"></i>Uitklokken
+                        </button>
+                    </form>
+
+                    <!-- Break display -->
+                    <span class="text-muted ms-3">
+                        <i class="bi bi-cup-hot me-1"></i>Pauze:
+                        <span id="breakDisplay"
+                              th:data-break-seconds="${clockSession.totalBreakSeconds}"
+                              th:data-break-start="${clockSession.breakStart != null ? #temporals.format(clockSession.breakStart, 'yyyy-MM-dd''T''HH:mm:ss') : ''}">
+                            --:--
+                        </span>
+                    </span>
+
+                    <!-- Cancel -->
+                    <form th:action="@{/time-entry/clock-cancel}" method="post" class="d-inline ms-auto">
+                        <button type="submit" class="btn btn-sm btn-outline-secondary"
+                                onclick="return confirm('Weet je zeker dat je de sessie wilt annuleren?')">
+                            <i class="bi bi-x-circle me-1"></i>Annuleren
+                        </button>
+                    </form>
+                </div>
+            </div>
+        </div>
 
         <div class="row">
             <!-- Existing entries for this date -->
             <div class="col-md-7">
                 <div class="card">
-                    <div class="card-header d-flex justify-content-between">
+                    <div class="card-header d-flex justify-content-between align-items-center">
                         <span>Geregistreerde uren</span>
-                        <span class="fw-bold"
-                              th:text="'Totaal: ' + ${#numbers.formatDecimal(totalHours, 1, 1, 'COMMA')} + 'u'"></span>
+                        <span>
+                            <span class="fw-bold" th:text="'Totaal: ' + ${hourFmt.format(totalHours)}"></span>
+                            <span th:if="${totalHours.signum() > 0}" class="ms-2 badge"
+                                  th:classappend="${dailyBalance.signum() >= 0} ? 'bg-success' : 'bg-danger'"
+                                  th:text="${(dailyBalance.signum() >= 0 ? '+' : '') + hourFmt.format(dailyBalance)}"></span>
+                        </span>
                     </div>
                     <div class="card-body p-0">
                         <table class="table table-hover mb-0" th:if="${!#lists.isEmpty(entries)}">
@@ -51,6 +173,7 @@
                                 <tr>
                                     <th>Project</th>
                                     <th class="text-center">Uren</th>
+                                    <th class="text-center">Pauze</th>
                                     <th>Locatie</th>
                                     <th>Notities</th>
                                     <th class="text-end">Acties</th>
@@ -60,7 +183,9 @@
                                 <tr th:each="entry : ${entries}">
                                     <td th:text="${entry.project.name}"></td>
                                     <td class="text-center"
-                                        th:text="${#numbers.formatDecimal(entry.hoursWorked, 1, 1, 'COMMA')} + 'u'"></td>
+                                        th:text="${hourFmt.format(entry.hoursWorked.add(entry.breakDuration != null ? entry.breakDuration : T(java.math.BigDecimal).ZERO))}"></td>
+                                    <td class="text-center text-muted"
+                                        th:text="${entry.breakDuration != null and entry.breakDuration.compareTo(T(java.math.BigDecimal).ZERO) != 0} ? ${hourFmt.format(entry.breakDuration)} : ''"></td>
                                     <td>
                                         <span th:if="${entry.workLocation.name() == 'HOME'}"><i class="bi bi-house"></i> Thuis</span>
                                         <span th:if="${entry.workLocation.name() == 'OFFICE'}"><i class="bi bi-building"></i> Kantoor</span>
@@ -102,8 +227,9 @@
                                         <input type="radio" class="btn-check" autocomplete="off"
                                                th:name="'projectBtn'" th:id="'proj_' + ${p.id}"
                                                th:value="${p.id}"
-                                               th:checked="${timeEntry.projectId != null and timeEntry.projectId == p.id}"
-                                               onclick="document.getElementById('projectId').value = this.value;">
+                                               th:data-default-break="${p.defaultBreakDuration != null ? p.defaultBreakDuration : '0'}"
+                                               th:checked="${timeEntry != null and timeEntry.projectId != null and timeEntry.projectId == p.id}"
+                                               onclick="document.getElementById('projectId').value = this.value; updateBreakDefault(this);">
                                         <label class="btn btn-outline-primary"
                                                th:for="'proj_' + ${p.id}"
                                                th:text="${p.name}"></label>
@@ -116,16 +242,28 @@
                             <div class="mb-3">
                                 <label for="hoursWorked" class="form-label">Uren *</label>
                                 <div class="d-flex flex-wrap gap-1 mb-2">
-                                    <button type="button" class="btn btn-sm btn-outline-secondary hour-preset" data-hours="4">4u</button>
-                                    <button type="button" class="btn btn-sm btn-outline-secondary hour-preset" data-hours="7.6">7,6u</button>
-                                    <button type="button" class="btn btn-sm btn-outline-primary hour-preset" data-hours="8">8u</button>
+                                    <button type="button" class="btn btn-sm btn-outline-secondary hour-preset" data-hours="4">4:00</button>
+                                    <button type="button" class="btn btn-sm btn-outline-secondary hour-preset" data-hours="7.6">7:36</button>
+                                    <button type="button" class="btn btn-sm btn-outline-primary hour-preset" data-hours="8">8:00</button>
                                 </div>
-                                <input type="number" class="form-control" id="hoursWorked"
+                                <input type="text" class="form-control hour-input" id="hoursWorked"
                                        th:field="*{hoursWorked}"
                                        th:classappend="${#fields.hasErrors('hoursWorked')} ? 'is-invalid'"
-                                       step="0.1" min="0" max="24" placeholder="bv. 8,0">
+                                       placeholder="bv. 7:36 of 7,6">
                                 <div class="invalid-feedback" th:if="${#fields.hasErrors('hoursWorked')}"
                                      th:errors="*{hoursWorked}"></div>
+                            </div>
+
+                            <div class="mb-3">
+                                <label for="breakDuration" class="form-label">Pauze</label>
+                                <div class="d-flex flex-wrap gap-1 mb-2">
+                                    <button type="button" class="btn btn-sm btn-outline-secondary break-preset" data-hours="0">0:00</button>
+                                    <button type="button" class="btn btn-sm btn-outline-secondary break-preset" data-hours="0.5">0:30</button>
+                                </div>
+                                <input type="text" class="form-control hour-input" id="breakDuration"
+                                       th:field="*{breakDuration}"
+                                       placeholder="bv. 0:30">
+                                <div class="form-text">Pauze wordt afgetrokken van de uren. Thuis = altijd 0.</div>
                             </div>
 
                             <div class="row mb-3">
@@ -150,13 +288,15 @@
                                 <div class="d-flex gap-2">
                                     <input type="radio" class="btn-check" name="workLocation" id="locOffice"
                                            value="OFFICE"
-                                           th:checked="${timeEntry.workLocation() == null or timeEntry.workLocation().name() == 'OFFICE'}">
+                                           th:checked="${timeEntry.workLocation() == null or timeEntry.workLocation().name() == 'OFFICE'}"
+                                           onchange="updateBreakForLocation()">
                                     <label class="btn btn-outline-secondary" for="locOffice">
                                         <i class="bi bi-building me-1"></i>Kantoor
                                     </label>
                                     <input type="radio" class="btn-check" name="workLocation" id="locHome"
                                            value="HOME"
-                                           th:checked="${timeEntry.workLocation() != null and timeEntry.workLocation().name() == 'HOME'}">
+                                           th:checked="${timeEntry.workLocation() != null and timeEntry.workLocation().name() == 'HOME'}"
+                                           onchange="updateBreakForLocation()">
                                     <label class="btn btn-outline-secondary" for="locHome">
                                         <i class="bi bi-house me-1"></i>Thuis
                                     </label>

@@ -4,7 +4,6 @@ import be.axxes.timesheets.dto.MonthlyProjectSummary;
 import be.axxes.timesheets.dto.MonthlySummary;
 import be.axxes.timesheets.model.LeaveType;
 import be.axxes.timesheets.model.TimeEntry;
-import be.axxes.timesheets.repository.InternalActivityRepository;
 import be.axxes.timesheets.repository.LeaveEntryRepository;
 import be.axxes.timesheets.repository.TimeEntryRepository;
 import org.springframework.stereotype.Service;
@@ -22,16 +21,13 @@ public class ReportService {
 
     private final TimeEntryRepository timeEntryRepository;
     private final LeaveEntryRepository leaveEntryRepository;
-    private final InternalActivityRepository internalActivityRepository;
     private final OvertimeService overtimeService;
 
     public ReportService(TimeEntryRepository timeEntryRepository,
                          LeaveEntryRepository leaveEntryRepository,
-                         InternalActivityRepository internalActivityRepository,
                          OvertimeService overtimeService) {
         this.timeEntryRepository = timeEntryRepository;
         this.leaveEntryRepository = leaveEntryRepository;
-        this.internalActivityRepository = internalActivityRepository;
         this.overtimeService = overtimeService;
     }
 
@@ -43,7 +39,7 @@ public class ReportService {
         var timeEntries = timeEntryRepository.findByEntryDateBetweenOrderByEntryDateAsc(start, end);
         var leaveEntries = leaveEntryRepository.findByEntryDateBetweenOrderByEntryDateAsc(start, end);
 
-        // Total hours
+        // Total hours (net)
         var totalHours = timeEntries.stream()
                 .map(TimeEntry::getHoursWorked)
                 .reduce(BigDecimal.ZERO, BigDecimal::add);
@@ -89,13 +85,6 @@ public class ReportService {
                 .map(MonthlyProjectSummary::overtimeHours)
                 .reduce(BigDecimal.ZERO, BigDecimal::add);
 
-        // Internal activity hours
-        var internalActivityHours = internalActivityRepository
-                .findByActivityDateBetweenOrderByActivityDateAsc(start, end)
-                .stream()
-                .map(a -> a.getHours())
-                .reduce(BigDecimal.ZERO, BigDecimal::add);
-
         // Work days (distinct dates with time entries)
         var workDays = timeEntries.stream()
                 .map(TimeEntry::getEntryDate)
@@ -122,7 +111,7 @@ public class ReportService {
 
         return new MonthlySummary(
                 year, month, monthName,
-                totalHours, billableHours, nonBillableHours, overtimeHours, internalActivityHours,
+                totalHours, billableHours, nonBillableHours, overtimeHours,
                 workDays, vacationDays, sickDays, advDays, otherLeaveDays,
                 projectSummaries, leaveByType
         );

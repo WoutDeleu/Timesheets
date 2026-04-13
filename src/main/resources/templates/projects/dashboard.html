@@ -1,0 +1,150 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org"
+      xmlns:layout="http://www.ultraq.net.nz/thymeleaf/layout"
+      layout:decorate="~{layout/main}">
+<head>
+    <title th:text="'Dashboard: ' + ${summary.projectName()}">Dashboard</title>
+</head>
+<body>
+    <section layout:fragment="content">
+        <!-- Header -->
+        <div class="d-flex justify-content-between align-items-center mb-4">
+            <h1>
+                <span th:text="${summary.projectName()}"></span>
+                <span th:if="${summary.billable()}" class="badge bg-success fs-6 ms-2">Factureerbaar</span>
+                <span th:unless="${summary.billable()}" class="badge bg-secondary fs-6 ms-2">Intern</span>
+            </h1>
+            <a th:href="@{/projects}" class="btn btn-outline-secondary">
+                <i class="bi bi-arrow-left me-1"></i>Terug naar projecten
+            </a>
+        </div>
+
+        <!-- Date range filter -->
+        <div class="card mb-4">
+            <div class="card-body">
+                <form method="get" th:action="@{/projects/{id}/dashboard(id=${summary.projectId()})}"
+                      class="row g-3 align-items-end">
+                    <div class="col-auto">
+                        <label class="form-label">Van</label>
+                        <input type="date" name="startDate" class="form-control" th:value="${startDate}">
+                    </div>
+                    <div class="col-auto">
+                        <label class="form-label">Tot</label>
+                        <input type="date" name="endDate" class="form-control" th:value="${endDate}">
+                    </div>
+                    <div class="col-auto">
+                        <button type="submit" class="btn btn-primary">
+                            <i class="bi bi-filter me-1"></i>Filteren
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+
+        <!-- Statistics cards -->
+        <div class="row g-3 mb-4">
+            <div class="col-md-4">
+                <div class="card text-center h-100">
+                    <div class="card-body">
+                        <h6 class="card-subtitle text-muted mb-2">Totaal uren</h6>
+                        <h3 th:text="${hourFmt.format(summary.totalHours())}">0:00</h3>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-4">
+                <div class="card text-center h-100">
+                    <div class="card-body">
+                        <h6 class="card-subtitle text-muted mb-2">Werkdagen</h6>
+                        <h3 th:text="${summary.totalDays()}">0</h3>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-4">
+                <div class="card text-center h-100">
+                    <div class="card-body">
+                        <h6 class="card-subtitle text-muted mb-2">Overuren saldo</h6>
+                        <h3 th:classappend="${summary.overtimeSaldo().signum() >= 0} ? 'saldo-positive' : 'saldo-negative'"
+                            th:text="${hourFmt.format(summary.overtimeSaldo())}">0:00</h3>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-6">
+                <div class="card text-center h-100">
+                    <div class="card-body">
+                        <h6 class="card-subtitle text-muted mb-2">Gem. uren/dag</h6>
+                        <h3 th:text="${hourFmt.format(summary.averageHoursPerDay())}">0:00</h3>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-6">
+                <div class="card text-center h-100">
+                    <div class="card-body">
+                        <h6 class="card-subtitle text-muted mb-2">Kantoor</h6>
+                        <h3>
+                            <span th:text="${summary.officePercentage()}">0</span><span>%</span>
+                        </h3>
+                        <small class="text-muted"
+                               th:text="${summary.officeDays()} + ' kantoor / ' + ${summary.homeDays()} + ' thuis'"></small>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Weekly breakdown table -->
+        <div class="card">
+            <div class="card-header">
+                <i class="bi bi-calendar-week me-1"></i>Weekoverzicht
+            </div>
+            <div class="card-body p-0">
+                <div class="table-responsive">
+                    <table class="table table-hover table-bordered mb-0" th:if="${!#lists.isEmpty(summary.weekRows())}">
+                        <thead class="table-light">
+                            <tr>
+                                <th>Week</th>
+                                <th class="text-center">Maandag</th>
+                                <th class="text-center">Dinsdag</th>
+                                <th class="text-center">Woensdag</th>
+                                <th class="text-center">Donderdag</th>
+                                <th class="text-center">Vrijdag</th>
+                                <th class="text-center">Totaal</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr th:each="row : ${summary.weekRows()}">
+                                <td>
+                                    <strong th:text="'W' + ${row.weekNumber()}"></strong>
+                                    <small class="text-muted d-block"
+                                           th:text="${#temporals.format(row.monday(), 'dd/MM')} + ' - ' + ${#temporals.format(row.monday().plusDays(4), 'dd/MM')}"></small>
+                                </td>
+                                <th:block th:with="cells=${
+                                    {row.mondayCell(), row.tuesdayCell(), row.wednesdayCell(),
+                                     row.thursdayCell(), row.fridayCell()}}">
+                                    <td class="text-center" th:each="cell : ${cells}">
+                                        <span th:if="${cell.hours() != null}">
+                                            <span th:text="${hourFmt.format(cell.hours())}"></span>
+                                            <small class="d-block"
+                                                   th:classappend="${cell.balance().signum() >= 0} ? 'text-success' : 'text-danger'"
+                                                   th:text="${(cell.balance().signum() >= 0 ? '+' : '') + hourFmt.format(cell.balance())}"></small>
+                                            <i th:if="${cell.location().name() == 'HOME'}"
+                                               class="bi bi-house-fill text-primary" title="Thuis"></i>
+                                            <i th:if="${cell.location().name() == 'OFFICE'}"
+                                               class="bi bi-building text-secondary" title="Kantoor"></i>
+                                        </span>
+                                        <span th:if="${cell.hours() == null}" class="text-muted">--</span>
+                                    </td>
+                                </th:block>
+                                <!-- Week total -->
+                                <td class="text-center fw-bold"
+                                    th:text="${hourFmt.format(row.weekTotal())}">0:00</td>
+                            </tr>
+                        </tbody>
+                    </table>
+                    <div th:if="${#lists.isEmpty(summary.weekRows())}" class="text-center text-muted py-4">
+                        Geen uren geregistreerd in deze periode.
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+</body>
+</html>

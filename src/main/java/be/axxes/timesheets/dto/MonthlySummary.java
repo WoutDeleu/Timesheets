@@ -12,7 +12,6 @@ public record MonthlySummary(
         BigDecimal billableHours,
         BigDecimal nonBillableHours,
         BigDecimal overtimeHours,
-        BigDecimal internalActivityHours,
         long workDays,
         long vacationDays,
         long sickDays,

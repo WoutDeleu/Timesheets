@@ -7,7 +7,10 @@ import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 
+import java.math.BigDecimal;
 import java.time.LocalDate;
+import java.time.format.DateTimeFormatter;
+import java.util.stream.Collectors;
 
 @Controller
 @RequestMapping("/reports")
@@ -76,6 +79,56 @@ public class ReportController {
         model.addAttribute("totalOvertime", overtimeService.calculateTotalOvertime(selectedYear));
 
         return "reports/yearly";
+    }
+
+    @GetMapping("/overtime")
+    public String overtime(@RequestParam(required = false) Integer year,
+                           @RequestParam(required = false) Long projectId,
+                           Model model) {
+        var selectedYear = year != null ? year : LocalDate.now().getYear();
+        var projects = projectService.getAllActiveProjects();
+
+        // Default to first active project if none selected
+        var selectedProjectId = projectId;
+        if (selectedProjectId == null && !projects.isEmpty()) {
+            selectedProjectId = projects.get(0).getId();
+        }
+
+        var chartLabelsJson = "[]";
+        var chartDataJson = "[]";
+        String selectedProjectName = null;
+
+        if (selectedProjectId != null) {
+            var start = LocalDate.of(selectedYear, 1, 1);
+            var end = LocalDate.of(selectedYear, 12, 31);
+            var evolution = overtimeService.calculateOvertimeEvolution(selectedProjectId, start, end);
+
+            var dateFmt = DateTimeFormatter.ofPattern("dd/MM");
+            chartLabelsJson = evolution.keySet().stream()
+                    .map(d -> "\"" + d.format(dateFmt) + "\"")
+                    .collect(Collectors.joining(",", "[", "]"));
+            chartDataJson = evolution.values().stream()
+                    .map(BigDecimal::toPlainString)
+                    .collect(Collectors.joining(",", "[", "]"));
+
+            // Find project name
+            for (var p : projects) {
+                if (p.getId().equals(selectedProjectId)) {
+                    selectedProjectName = p.getName();
+                    break;
+                }
+            }
+        }
+
+        model.addAttribute("currentPage", "reports");
+        model.addAttribute("selectedYear", selectedYear);
+        model.addAttribute("projects", projects);
+        model.addAttribute("selectedProjectId", selectedProjectId);
+        model.addAttribute("selectedProjectName", selectedProjectName);
+        model.addAttribute("chartLabelsJson", chartLabelsJson);
+        model.addAttribute("chartDataJson", chartDataJson);
+
+        return "reports/overtime";
     }
 
     @GetMapping("/export")

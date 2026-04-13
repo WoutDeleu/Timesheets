@@ -17,6 +17,8 @@ public class ProjectDto {
 
     private BigDecimal dailyHourTarget;
 
+    private BigDecimal defaultBreakDuration;
+
     private boolean billable = true;
 
     private boolean active = true;
@@ -24,11 +26,12 @@ public class ProjectDto {
     public ProjectDto() {
     }
 
-    public ProjectDto(Long id, String name, String description, BigDecimal dailyHourTarget, boolean billable, boolean active) {
+    public ProjectDto(Long id, String name, String description, BigDecimal dailyHourTarget, BigDecimal defaultBreakDuration, boolean billable, boolean active) {
         this.id = id;
         this.name = name;
         this.description = description;
         this.dailyHourTarget = dailyHourTarget;
+        this.defaultBreakDuration = defaultBreakDuration;
         this.billable = billable;
         this.active = active;
     }
@@ -44,6 +47,9 @@ public class ProjectDto {
 
     public BigDecimal getDailyHourTarget() { return dailyHourTarget; }
     public void setDailyHourTarget(BigDecimal dailyHourTarget) { this.dailyHourTarget = dailyHourTarget; }
+
+    public BigDecimal getDefaultBreakDuration() { return defaultBreakDuration; }
+    public void setDefaultBreakDuration(BigDecimal defaultBreakDuration) { this.defaultBreakDuration = defaultBreakDuration; }
 
     public boolean isBillable() { return billable; }
     public void setBillable(boolean billable) { this.billable = billable; }
