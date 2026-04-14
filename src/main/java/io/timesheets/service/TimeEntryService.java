@@ -63,9 +63,7 @@ public List<TimeEntry> getEntriesForMonth(int year, int month) {
             entry = timeEntryRepository.findById(dto.id())
                     .orElseThrow(() -> new IllegalArgumentException("Uurregistratie niet gevonden: " + dto.id()));
         } else {
-            // Look up existing entry by date+project to support upsert from weekly grid
-            entry = timeEntryRepository.findByEntryDateAndProjectId(dto.entryDate(), dto.projectId())
-                    .orElse(new TimeEntry());
+            entry = new TimeEntry();
         }
 
         var project = projectRepository.findById(dto.projectId())

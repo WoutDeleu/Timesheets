@@ -36,8 +36,10 @@ public class HourFormatter {
         var totalMinutes = decimalHours.multiply(BigDecimal.valueOf(60))
                 .setScale(0, RoundingMode.HALF_UP)
                 .intValue();
-        var hours = totalMinutes / 60;
-        var minutes = totalMinutes % 60;
-        return String.format("%d:%02d", hours, minutes);
+        var sign = totalMinutes < 0 ? "-" : "";
+        var absTotalMinutes = Math.abs(totalMinutes);
+        var hours = absTotalMinutes / 60;
+        var minutes = absTotalMinutes % 60;
+        return String.format("%s%d:%02d", sign, hours, minutes);
     }
 }
