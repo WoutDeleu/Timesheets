@@ -20,14 +20,16 @@ function parseHours(input) {
 }
 
 /**
- * Format decimal hours as H:MM string (e.g. 7.6 → "7:36").
+ * Format decimal hours as H:MM string (e.g. 7.6 → "7:36", -7.6 → "-7:36").
  */
 function formatHours(decimal) {
     if (isNaN(decimal) || decimal === null || decimal === undefined) return '';
     var totalMinutes = Math.round(decimal * 60);
-    var hours = Math.floor(totalMinutes / 60);
-    var minutes = totalMinutes % 60;
-    return hours + ':' + (minutes < 10 ? '0' : '') + minutes;
+    var sign = totalMinutes < 0 ? '-' : '';
+    var absTotalMinutes = Math.abs(totalMinutes);
+    var hours = Math.floor(absTotalMinutes / 60);
+    var minutes = absTotalMinutes % 60;
+    return sign + hours + ':' + (minutes < 10 ? '0' : '') + minutes;
 }
 
 /**

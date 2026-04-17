@@ -65,6 +65,21 @@
                         <div class="form-text">Factureerbare uren worden apart gerapporteerd voor klantfacturatie.</div>
                     </div>
 
+                    <!-- Internal project -->
+                    <div class="mb-3">
+                        <div class="form-check">
+                            <input class="form-check-input" type="checkbox" id="internalProject" th:field="*{internalProject}">
+                            <label class="form-check-label" for="internalProject">
+                                Intern project
+                            </label>
+                        </div>
+                        <div class="form-text">
+                            Uren voor interne projecten (bv. werkgeverswerk, AXXES-taken) tellen niet mee voor het saldo,
+                            maar vullen wél het tekort van klantprojecten op dezelfde dag op.
+                            Gebruik dit voor uren die officieel als verlof gelden bij de klant.
+                        </div>
+                    </div>
+
                     <!-- Active (only for edit) -->
                     <div class="mb-3" th:if="${isEdit}">
                         <div class="form-check">

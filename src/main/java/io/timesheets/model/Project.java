@@ -29,6 +29,9 @@ public class Project {
     @Column(nullable = false)
     private boolean active = true;
 
+    @Column(name = "internal_project", nullable = false)
+    private boolean internalProject = false;
+
     @Column(name = "created_at", nullable = false, updatable = false)
     private LocalDateTime createdAt = LocalDateTime.now();
 
@@ -60,6 +63,9 @@ public class Project {
 
     public boolean isActive() { return active; }
     public void setActive(boolean active) { this.active = active; }
+
+    public boolean isInternalProject() { return internalProject; }
+    public void setInternalProject(boolean internalProject) { this.internalProject = internalProject; }
 
     public LocalDateTime getCreatedAt() { return createdAt; }
     public LocalDateTime getUpdatedAt() { return updatedAt; }

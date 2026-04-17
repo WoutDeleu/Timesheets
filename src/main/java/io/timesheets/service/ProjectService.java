@@ -38,7 +38,8 @@ public class ProjectService {
                 project.getDailyHourTarget(),
                 project.getDefaultBreakDuration(),
                 project.isBillable(),
-                project.isActive()
+                project.isActive(),
+                project.isInternalProject()
         );
     }
 
@@ -77,5 +78,6 @@ public class ProjectService {
         project.setDefaultBreakDuration(dto.getDefaultBreakDuration());
         project.setBillable(dto.isBillable());
         project.setActive(dto.isActive());
+        project.setInternalProject(dto.isInternalProject());
     }
 }

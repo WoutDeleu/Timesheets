@@ -178,6 +178,11 @@ public class OverviewService {
 
     private BigDecimal computeDailyBalance(List<TimeEntry> entries) {
         var defaultTarget = settingsService.getDefaultDailyHours();
+
+        var clientHours = BigDecimal.ZERO;
+        var internalHours = BigDecimal.ZERO;
+        var clientTargets = BigDecimal.ZERO;
+
         var projectNetHours = entries.stream()
                 .collect(Collectors.groupingBy(
                         e -> e.getProject().getId(),
@@ -186,18 +191,28 @@ public class OverviewService {
                                 BigDecimal::add)
                 ));
 
-        var balance = BigDecimal.ZERO;
         for (var entry : projectNetHours.entrySet()) {
             var pid = entry.getKey();
             var netHours = entry.getValue();
             var project = entries.stream()
                     .filter(e -> e.getProject().getId().equals(pid))
                     .findFirst().get().getProject();
-            var target = project.getDailyHourTarget() != null
-                    ? project.getDailyHourTarget()
-                    : defaultTarget;
-            balance = balance.add(netHours.subtract(target));
+
+            if (project.isInternalProject()) {
+                internalHours = internalHours.add(netHours);
+            } else {
+                clientHours = clientHours.add(netHours);
+                var target = project.getDailyHourTarget() != null
+                        ? project.getDailyHourTarget()
+                        : defaultTarget;
+                clientTargets = clientTargets.add(target);
+            }
         }
-        return balance;
+
+        // Internal hours fill client deficits but cannot create client overtime.
+        if (clientHours.compareTo(clientTargets) >= 0) {
+            return clientHours.subtract(clientTargets);
+        }
+        return clientHours.add(internalHours).subtract(clientTargets).min(BigDecimal.ZERO);
     }
 }

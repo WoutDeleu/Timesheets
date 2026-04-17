@@ -200,7 +200,10 @@ public class TimeEntryController {
     private BigDecimal computeDailyBalance(LocalDate date, BigDecimal grossTotal) {
         var entries = timeEntryService.getEntriesForDate(date);
 
-        // Per-project balance: net hours (hoursWorked) minus project daily target
+        var clientHours = BigDecimal.ZERO;
+        var internalHours = BigDecimal.ZERO;
+        var clientTargets = BigDecimal.ZERO;
+
         var projectNetHours = new java.util.HashMap<Long, BigDecimal>();
         for (var entry : entries) {
             var pid = entry.getProject().getId();
@@ -208,16 +211,27 @@ public class TimeEntryController {
             projectNetHours.merge(pid, hours, BigDecimal::add);
         }
 
-        var balance = BigDecimal.ZERO;
         for (var pid : projectNetHours.keySet()) {
             var project = entries.stream()
                     .filter(te -> te.getProject().getId().equals(pid))
                     .findFirst().get().getProject();
-            var dailyTarget = project.getDailyHourTarget() != null
-                    ? project.getDailyHourTarget()
-                    : settingsService.getDefaultDailyHours();
-            balance = balance.add(projectNetHours.get(pid).subtract(dailyTarget));
+            var netHours = projectNetHours.get(pid);
+
+            if (project.isInternalProject()) {
+                internalHours = internalHours.add(netHours);
+            } else {
+                clientHours = clientHours.add(netHours);
+                var dailyTarget = project.getDailyHourTarget() != null
+                        ? project.getDailyHourTarget()
+                        : settingsService.getDefaultDailyHours();
+                clientTargets = clientTargets.add(dailyTarget);
+            }
         }
-        return balance;
+
+        // Internal hours fill client deficits but cannot create client overtime.
+        if (clientHours.compareTo(clientTargets) >= 0) {
+            return clientHours.subtract(clientTargets);
+        }
+        return clientHours.add(internalHours).subtract(clientTargets).min(BigDecimal.ZERO);
     }
 }

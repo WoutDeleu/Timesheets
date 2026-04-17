@@ -23,10 +23,12 @@ public class ProjectDto {
 
     private boolean active = true;
 
+    private boolean internalProject = false;
+
     public ProjectDto() {
     }
 
-    public ProjectDto(Long id, String name, String description, BigDecimal dailyHourTarget, BigDecimal defaultBreakDuration, boolean billable, boolean active) {
+    public ProjectDto(Long id, String name, String description, BigDecimal dailyHourTarget, BigDecimal defaultBreakDuration, boolean billable, boolean active, boolean internalProject) {
         this.id = id;
         this.name = name;
         this.description = description;
@@ -34,6 +36,7 @@ public class ProjectDto {
         this.defaultBreakDuration = defaultBreakDuration;
         this.billable = billable;
         this.active = active;
+        this.internalProject = internalProject;
     }
 
     public Long getId() { return id; }
@@ -56,4 +59,7 @@ public class ProjectDto {
 
     public boolean isActive() { return active; }
     public void setActive(boolean active) { this.active = active; }
+
+    public boolean isInternalProject() { return internalProject; }
+    public void setInternalProject(boolean internalProject) { this.internalProject = internalProject; }
 }

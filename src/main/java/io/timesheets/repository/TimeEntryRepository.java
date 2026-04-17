@@ -16,4 +16,6 @@ public interface TimeEntryRepository extends JpaRepository<TimeEntry, Long> {
     List<TimeEntry> findByProjectIdAndEntryDateBetween(Long projectId, LocalDate start, LocalDate end);
 
     Optional<TimeEntry> findByEntryDateAndProjectId(LocalDate date, Long projectId);
+
+    List<TimeEntry> findByProjectInternalProjectTrueAndEntryDateBetween(LocalDate start, LocalDate end);
 }
