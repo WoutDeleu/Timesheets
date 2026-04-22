@@ -38,3 +38,4 @@ data/*.lock.db
 
 # OS
 Thumbs.db
+scripts/backup-db.log
