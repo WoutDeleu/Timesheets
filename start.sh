@@ -3,6 +3,12 @@ set -e
 
 cd "$(dirname "$0")"
 
+# Load correct Java version for this project via SDKMAN, without changing the global default
+if [[ -f "$HOME/.sdkman/bin/sdkman-init.sh" && -f ".sdkmanrc" ]]; then
+    source "$HOME/.sdkman/bin/sdkman-init.sh"
+    sdk env
+fi
+
 APP_PORT=8080
 APP_URL="http://localhost:${APP_PORT}"
 
