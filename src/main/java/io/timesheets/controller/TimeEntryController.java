@@ -9,6 +9,7 @@ import io.timesheets.service.SettingsService;
 import io.timesheets.service.TimeEntryService;
 import io.timesheets.service.HolidayService;
 import jakarta.validation.Valid;
+import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
 import org.springframework.validation.BindingResult;
@@ -117,7 +118,15 @@ public class TimeEntryController {
             model.addAttribute("clockedIn", activeSession.isPresent());
             return "time-entry/daily";
         }
-        timeEntryService.save(dto);
+        // Daily form always creates a new entry (id forced to null)
+        var createDto = new TimeEntryDto(null, dto.entryDate(), dto.projectId(), dto.hoursWorked(),
+                dto.startTime(), dto.endTime(), dto.notes(), dto.workLocation(), dto.breakDuration());
+        try {
+            timeEntryService.save(createDto);
+        } catch (DataIntegrityViolationException e) {
+            redirectAttributes.addFlashAttribute("error", "Kon de uren niet opslaan — mogelijk een databaseconflict. Herstart de applicatie.");
+            return "redirect:/time-entry?date=" + dto.entryDate();
+        }
         redirectAttributes.addFlashAttribute("success", "Uren opgeslagen");
         return "redirect:/time-entry?date=" + dto.entryDate();
     }
